@@ -1,5 +1,5 @@
 <view class="page page-enter">
-  <view class="hint">教练上课时选择班级，手机点名后自动形成出勤记录和课时流水。</view>
+  <view class="hint">班级用于维护教练和学员关系；逐节训练、报名和点名统一在课程页面完成。</view>
   <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
   <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
   <block wx:else>
@@ -11,7 +11,7 @@
     <view class="divider"></view>
     <view class="line"><text class="muted">训练时间</text><text>{{item.schedule}}</text></view>
     <view class="line"><text class="muted">训练场地</text><text>{{item.venue}}</text></view>
-    <button wx:if="{{role !== 'parent'}}" class="btn-primary take" data-id="{{item.id}}" bindtap="attendance">开始点名</button>
+    <button wx:if="{{role !== 'parent'}}" class="btn-primary take" data-id="{{item.id}}" bindtap="attendance">查看课程</button>
   </view>
   <view class="empty card" wx:if="{{classes.length === 0}}">{{role === 'admin' ? '还没有班级，创建后即可分配教练和学员' : '暂未分配班级'}}<view class="retry" wx:if="{{role === 'admin'}}" bindtap="add">创建班级</view></view>
   </block>

@@ -5,6 +5,13 @@ page {
   font-size: 28rpx;
   -webkit-font-smoothing: antialiased;
 }
+.brand-blue { color:#173b77; }.brand-gold { color:#d1a72f; }
+.brand-hero { background:linear-gradient(145deg,#102f63,#28569a); color:#fff; }
+.btn-primary { background:#173b77; }
+.btn-secondary { background:#eaf0f9; color:#173b77; }
+.tag { background:#eaf0f9; color:#173b77; }
+.tag.gold { background:#fff6da; color:#8c6700; }
+.fab { background:#173b77; box-shadow:0 14rpx 34rpx rgba(23,59,119,.28); }
 view, text, button, input, textarea, picker { box-sizing: border-box; }
 .page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); }
 .page-enter { animation: fade-up .28s ease-out both; }

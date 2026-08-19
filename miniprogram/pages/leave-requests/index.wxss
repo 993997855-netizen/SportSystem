@@ -1,0 +1,1 @@
+.request{margin-bottom:18rpx}.name{font-size:31rpx;font-weight:750}.meta{margin-top:8rpx}.reason{background:#f5f7fb;border-radius:14rpx;padding:18rpx;margin:18rpx 0;line-height:1.6}.actions{display:flex;justify-content:flex-end;gap:12rpx;margin-top:18rpx}.actions button{margin:0;border-radius:99rpx}.reject{background:#fff0f0;color:#b53737}.approve{background:#173b77;color:#fff}

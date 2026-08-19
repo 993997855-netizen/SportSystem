@@ -1,4 +1,4 @@
-const local = require("./local-service");
+const local = require("./local-domain");
 
 async function call(action, data = {}) {
   const app = getApp();

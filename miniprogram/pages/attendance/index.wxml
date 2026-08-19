@@ -2,7 +2,7 @@
 <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
 <view class="page page-enter" wx:else>
   <view class="card header-card">
-    <view class="between"><view><view class="name">{{clubClass.name}}</view><view class="muted small">{{clubClass.coachName}} · {{clubClass.venue}}</view></view><picker mode="date" value="{{date}}" end="{{today}}" bindchange="date"><view class="date">{{date}}⌄</view></picker></view>
+    <view class="between"><view><view class="name">{{session.title}}</view><view class="muted small">{{session.coachName}} · {{session.venue}}</view></view><view class="date">{{date}}</view></view>
     <view class="rule">扣课规则：到课、缺勤扣1节；请假、伤病不扣课。再次保存会自动校正，不会重复扣除。</view>
   </view>
 
@@ -21,6 +21,6 @@
     </view>
     <view class="health-note" wx:if="{{item.healthNotes && item.healthNotes !== '无'}}">{{item.healthNotes}}</view>
   </view>
-  <view class="empty card" wx:if="{{students.length === 0}}">该班级还没有学员，请管理员先分配学员。</view>
+  <view class="empty card" wx:if="{{students.length === 0}}">本节课还没有报名学员。</view>
   <view class="sticky-action"><button class="btn-primary submit" disabled="{{saving || students.length === 0}}" loading="{{saving}}" bindtap="submit">{{saving ? '正在保存' : (summary.unmarked ? '还有 ' + summary.unmarked + ' 人未点名' : '保存本次点名')}}</button></view>
 </view>

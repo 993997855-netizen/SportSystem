@@ -13,7 +13,7 @@ Page({
     } catch (error) { this.setData({ loading: false, error: "班级数据加载失败" }); }
     finally { wx.stopPullDownRefresh(); }
   },
-  attendance(event) { wx.navigateTo({ url: `/pages/attendance/index?classId=${event.currentTarget.dataset.id}` }); },
+  attendance() { wx.switchTab({ url: "/pages/sessions/index" }); },
   add() { wx.navigateTo({ url: "/pages/class-form/index" }); },
   edit(event) { wx.navigateTo({ url: `/pages/class-form/index?id=${event.currentTarget.dataset.id}` }); },
   async coachInvite(event) {

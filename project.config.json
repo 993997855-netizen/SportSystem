@@ -45,30 +45,12 @@
     "disableSWC": true
   },
   "appid": "wx6082ff5e4a142c74",
-  "projectname": "SportSystem-青训管家",
+  "projectname": "nanlian-club-v2",
   "libVersion": "2.20.1",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "condition": {
-    "search": {
-      "list": []
-    },
-    "conversation": {
-      "list": []
-    },
-    "plugin": {
-      "list": []
-    },
-    "game": {
-      "list": []
-    },
     "miniprogram": {
-      "list": [
-        {
-          "id": -1,
-          "name": "db guide",
-          "pathName": "pages/databaseGuide/databaseGuide"
-        }
-      ]
+      "list": []
     }
   },
   "compileType": "miniprogram",

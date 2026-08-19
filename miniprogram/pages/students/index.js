@@ -8,9 +8,10 @@ Page({
     if (!fromRefresh) this.setData({ loading: true, error: "" });
     try {
       const [context, students] = await Promise.all([api.call("getContext"), api.call("listStudents")]);
+      const decorated = students.map((item) => ({ ...item, lowBalance: Number(item.remainingLessons) <= 5 }));
       const keyword = this.data.keyword;
-      const filtered = keyword ? students.filter((item) => `${item.name}${item.guardianName}${item.classNames}`.includes(keyword)) : students;
-      this.setData({ students, filtered, role: context.user.role, loading: false, error: "" });
+      const filtered = keyword ? decorated.filter((item) => `${item.name}${item.guardianName}${item.classNames}`.includes(keyword)) : decorated;
+      this.setData({ students: decorated, filtered, role: context.user.role, loading: false, error: "" });
     } catch (error) {
       this.setData({ loading: false, error: "学员数据加载失败" });
     } finally { wx.stopPullDownRefresh(); }

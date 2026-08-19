@@ -2,16 +2,16 @@ const api = require("../../utils/api");
 const { today } = require("../../utils/format");
 
 Page({
-  data: { classId: "", date: today(), today: today(), clubClass: {}, students: [], saving: false, loading: true, error: "", dirty: false, summary: { marked: 0, unmarked: 0, present: 0, leave: 0, sick: 0, absent: 0 }, statuses: [
+  data: { sessionId: "", date: today(), today: today(), session: {}, students: [], saving: false, loading: true, error: "", dirty: false, summary: { marked: 0, unmarked: 0, present: 0, leave: 0, sick: 0, absent: 0 }, statuses: [
     { value: "present", label: "到课" }, { value: "leave", label: "请假" }, { value: "sick", label: "伤病" }, { value: "absent", label: "缺勤" }
   ] },
-  onLoad(options) { this.setData({ classId: options.classId || "" }); this.load(); },
+  onLoad(options) { this.setData({ sessionId: options.sessionId || "" }); this.load(); },
   async load() {
-    if (!this.data.classId) { this.setData({ loading: false, error: "缺少班级信息，请返回重试" }); return; }
+    if (!this.data.sessionId) { this.setData({ loading: false, error: "缺少课程信息，请返回重试" }); return; }
     this.setData({ loading: true, error: "" });
     try {
-      const sheet = await api.call("getAttendanceSheet", { classId: this.data.classId, date: this.data.date });
-      this.applyStudents(sheet.students, false, { clubClass: sheet.clubClass, loading: false });
+      const sheet = await api.call("getAttendanceSheet", { sessionId: this.data.sessionId });
+      this.applyStudents(sheet.students, false, { session: sheet.session, date: sheet.date, loading: false });
     } catch (error) { this.setData({ loading: false, error: "点名表加载失败" }); }
   },
   date(event) {
@@ -52,7 +52,7 @@ Page({
     if (this.data.summary.unmarked) { wx.showToast({ title: `还有${this.data.summary.unmarked}人未点名`, icon: "none" }); return; }
     this.setData({ saving: true });
     try {
-      await api.call("submitAttendance", { classId: this.data.classId, date: this.data.date, records: this.data.students.map((item) => ({ studentId: item.id, status: item.attendanceStatus })) });
+      await api.call("submitAttendance", { sessionId: this.data.sessionId, records: this.data.students.map((item) => ({ studentId: item.id, status: item.attendanceStatus })) });
       this.clearDirty();
       wx.showToast({ title: "点名已保存" });
     } finally { this.setData({ saving: false }); }

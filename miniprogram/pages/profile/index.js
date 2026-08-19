@@ -20,6 +20,10 @@ Page({
     wx.showToast({ title: `已切换为${roleLabels[role]}`, icon: "none" });
   },
   renewals() { wx.navigateTo({ url: "/pages/renewals/index" }); },
+  sessions() { wx.switchTab({ url: "/pages/sessions/index" }); },
+  leaves() { wx.navigateTo({ url: "/pages/leave-requests/index" }); },
+  operations() { wx.navigateTo({ url: "/pages/operations/index" }); },
+  classes() { wx.navigateTo({ url: "/pages/classes/index" }); },
   inviteInput(event) { this.setData({ inviteCode: event.detail.value }); },
   async claimInvite() {
     if (this.data.binding) return;
