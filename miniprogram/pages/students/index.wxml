@@ -1,0 +1,18 @@
+<view class="page page-enter">
+  <view class="search"><text class="search-icon">⌕</text><input placeholder="搜索孩子、家长或班级" value="{{keyword}}" bindinput="search" /><text class="clear" wx:if="{{keyword}}" bindtap="clearSearch">×</text></view>
+  <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
+  <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+  <block wx:else>
+  <view class="summary muted small">共 {{filtered.length}} 名学员</view>
+  <view class="card pressable student" wx:for="{{filtered}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
+    <view class="avatar">{{item.initial}}</view>
+    <view class="grow">
+      <view class="between"><view class="name">{{item.name}}</view><view class="lessons {{item.remainingLessons <= 5 ? 'low' : ''}}">{{item.remainingLessons}} 节</view></view>
+      <view class="muted small meta">{{item.classNames || '未分班'}}</view>
+      <view class="muted small">家长：{{item.guardianName}} · {{item.guardianPhone}}</view>
+    </view>
+  </view>
+  <view class="empty card" wx:if="{{filtered.length === 0}}">{{keyword ? '没有找到符合条件的学员' : '还没有学员，先创建第一份档案'}}<view class="retry" wx:if="{{!keyword && role === 'admin'}}" bindtap="add">创建学员</view></view>
+  </block>
+  <button class="fab" wx:if="{{role === 'admin'}}" bindtap="add">＋</button>
+</view>

@@ -1,0 +1,7 @@
+.search { display: flex; align-items: center; gap: 16rpx; background: #fff; border-radius: 20rpx; padding: 0 24rpx; height: 88rpx; }
+.search input { flex: 1; }
+.search-icon { color: #12643b; font-size: 36rpx; }.clear { color: #8a918d; font-size: 38rpx; padding: 10rpx; }
+.summary { margin: 24rpx 4rpx 18rpx; }
+.student { display: flex; align-items: center; gap: 22rpx; }
+.avatar { width: 88rpx; height: 88rpx; flex: 0 0 auto; border-radius: 26rpx; background: #e9f5ee; color: #12643b; line-height: 88rpx; text-align: center; font-size: 34rpx; font-weight: 800; }
+.name { font-weight: 700; font-size: 31rpx; }.meta { margin: 10rpx 0; }.lessons { color: #12643b; font-weight: 700; }.lessons.low { color: #d97800; }

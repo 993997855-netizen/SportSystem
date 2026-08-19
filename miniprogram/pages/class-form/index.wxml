@@ -1,0 +1,18 @@
+<view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
+<view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="retry">重新加载</view></view>
+<view class="page page-enter" wx:else>
+  <view class="card">
+    <view class="field"><text class="field-label">班级名称 *</text><input class="input" value="{{clubClass.name}}" data-key="name" bindinput="field" placeholder="例如：U10 提高班" /></view>
+    <view class="field"><text class="field-label">教练姓名 *</text><input class="input" value="{{clubClass.coachName}}" data-key="coachName" bindinput="field" placeholder="例如：张教练" /></view>
+    <view class="field"><text class="field-label">训练时间 *</text><input class="input" value="{{clubClass.schedule}}" data-key="schedule" bindinput="field" placeholder="例如：周三18:30 / 周六09:00" /></view>
+    <view class="field"><text class="field-label">训练场地 *</text><input class="input" value="{{clubClass.venue}}" data-key="venue" bindinput="field" placeholder="例如：一号足球场" /></view>
+  </view>
+  <view class="card">
+    <view class="field-label">选择班级学员</view>
+    <checkbox-group bindchange="students">
+      <label class="check" wx:for="{{students}}" wx:key="id"><checkbox value="{{item.id}}" checked="{{item.checked}}" color="#12643B"/><view><view>{{item.name}}</view><view class="muted small">剩余 {{item.remainingLessons}} 节</view></view></label>
+    </checkbox-group>
+    <view class="empty" wx:if="{{students.length === 0}}">请先创建学员</view>
+  </view>
+  <view class="sticky-action"><button class="btn-primary" disabled="{{saving}}" loading="{{saving}}" bindtap="save">{{saving ? '正在保存' : '保存班级'}}</button></view>
+</view>

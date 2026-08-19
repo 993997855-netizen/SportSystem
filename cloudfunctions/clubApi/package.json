@@ -1,0 +1,7 @@
+{
+  "name": "club-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "dependencies": { "wx-server-sdk": "~2.4.0" }
+}

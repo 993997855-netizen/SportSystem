@@ -1,0 +1,33 @@
+<view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
+<view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+<view class="page page-enter" wx:elif="{{student}}">
+  <view class="profile card">
+    <view class="avatar">{{student.initial}}</view>
+    <view class="grow"><view class="name">{{student.name}}</view><view class="muted small">{{student.gender}} · 出生于 {{student.birthDate}}</view></view>
+    <view class="lesson-box {{student.remainingLessons <= 5 ? 'low' : ''}}"><text class="count">{{student.remainingLessons}}</text><text class="small">{{student.remainingLessons <= 5 ? '建议续费' : '剩余课时'}}</text></view>
+  </view>
+
+  <view class="card">
+    <view class="between"><view class="card-title">基本信息</view><view><text class="invite" wx:if="{{role === 'admin' && mode === 'cloud'}}" bindtap="parentInvite">家长邀请码</text><text class="edit" wx:if="{{role === 'admin'}}" bindtap="edit">编辑</text></view></view>
+    <view class="info"><text class="muted">家长姓名</text><text>{{student.guardianName}}</text></view>
+    <view class="info"><text class="muted">联系电话</text><text>{{student.guardianPhone}}</text></view>
+    <view class="info"><text class="muted">累计购课</text><text>{{student.totalLessons}} 节</text></view>
+    <view class="info"><text class="muted">健康备注</text><text class="right">{{student.healthNotes || '无'}}</text></view>
+  </view>
+
+  <view class="section-title">所在班级</view>
+  <view class="card" wx:for="{{student.classes}}" wx:key="id">
+    <view class="between"><view><view class="card-title">{{item.name}}</view><view class="muted small mt">{{item.schedule}} · {{item.venue}}</view></view><view class="tag">{{item.coachName}}</view></view>
+  </view>
+  <view class="empty card" wx:if="{{student.classes.length === 0}}">暂未分班</view>
+
+  <view class="section-title">最近出勤</view>
+  <view class="card">
+    <view class="record" wx:for="{{student.attendance}}" wx:key="id">
+      <view><view>{{item.date}}</view><view class="muted small">扣除 {{item.deductedLessons}} 节课</view></view>
+      <view class="tag {{item.status === 'absent' ? 'danger' : (item.status === 'leave' || item.status === 'sick' ? 'warning' : '')}}">{{item.statusLabel}}</view>
+    </view>
+    <view class="empty" wx:if="{{student.attendance.length === 0}}">暂无点名记录</view>
+  </view>
+  <view class="sticky-action" wx:if="{{role !== 'coach'}}"><button class="btn-primary" bindtap="renew">续费 / 购买课时</button></view>
+</view>
