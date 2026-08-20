@@ -15,5 +15,5 @@
   </view>
   <view class="empty card" wx:if="{{classes.length === 0}}">{{role === 'admin' ? '还没有班级，创建后即可分配教练和学员' : '暂未分配班级'}}<view class="retry" wx:if="{{role === 'admin'}}" bindtap="add">创建班级</view></view>
   </block>
-  <button class="fab" wx:if="{{role === 'admin'}}" bindtap="add">＋</button>
+  <floating-add-button wx:if="{{role === 'admin'}}" bind:add="add" />
 </view>
