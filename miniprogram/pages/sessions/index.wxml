@@ -1,0 +1,17 @@
+<view class="page page-enter">
+  <view class="schedule-head brand-hero">
+    <view><view class="eyebrow">NANLIAN FOOTBALL CLUB</view><view class="title">训练课程</view><view class="sub">逐节发布 · 名额透明 · 候补有序</view></view>
+    <image class="logo" src="/images/nanlian-logo.png" mode="aspectFit" />
+  </view>
+  <picker wx:if="{{role === 'parent' && students.length > 1}}" mode="selector" range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="studentChange"><view class="card student-picker">当前学员：{{students[studentIndex].name}} <text>切换 ›</text></view></picker>
+  <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
+  <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+  <block wx:else>
+    <view class="section-title">近期课程</view>
+    <view class="card session pressable" wx:for="{{sessions}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
+      <view class="between"><view class="date"><text>{{item.weekday}}</text><text>{{item.shortDate}}</text></view><view class="grow main"><view class="between"><view class="name">{{item.title}}</view><view class="tag {{item.myStatus === 'booked' ? '' : 'gold'}}">{{item.statusLabel}}</view></view><view class="muted small meta">{{item.time}} · {{item.venue}}</view><view class="focus">本次重点 · {{item.focus}}</view></view></view>
+    </view>
+    <view class="empty card" wx:if="{{sessions.length === 0}}">暂未发布课程</view>
+  </block>
+  <button wx:if="{{role === 'admin'}}" class="fab" bindtap="add">＋</button>
+</view>

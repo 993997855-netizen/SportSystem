@@ -6,7 +6,7 @@ Page({
     classes: [],
     genders: ["男", "女"],
     genderIndex: 0,
-    student: { name: "", gender: "男", birthDate: "2016-01-01", guardianName: "", guardianPhone: "", healthNotes: "", remainingLessons: 0, totalLessons: 0, classIds: [] },
+    student: { name: "", gender: "男", birthDate: "2016-01-01", guardianName: "", guardianPhone: "", emergencyContact: "", healthNotes: "", remainingLessons: 0, totalLessons: 0, classIds: [] },
     saving: false,
     loading: true,
     error: ""

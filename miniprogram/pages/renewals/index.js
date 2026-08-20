@@ -3,7 +3,7 @@ const api = require("../../utils/api");
 Page({
   data: {
     role: "admin", renewals: [], students: [], showForm: false, studentId: "", studentIndex: 0, packageIndex: 1, loading: true, error: "", submitting: false, confirmingId: "",
-    packages: [{ id: "p10", lessons: 10, amount: 1500, label: "10节课 · ¥1500" }, { id: "p20", lessons: 20, amount: 2800, label: "20节课 · ¥2800" }, { id: "p40", lessons: 40, amount: 5200, label: "40节课 · ¥5200" }]
+    packages: [{ id: "p14", lessons: 14, amount: 1380, label: "一周一练 · 14节 · ¥1380" }, { id: "p28", lessons: 28, amount: 1980, label: "一周两练 · 28节 · ¥1980" }]
   },
   onLoad(options) { this.setData({ studentId: options.studentId || "" }); },
   onShow() { this.load(); },

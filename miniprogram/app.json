@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/sessions/index",
+    "pages/session-detail/index",
+    "pages/session-form/index",
     "pages/students/index",
     "pages/classes/index",
     "pages/profile/index",
@@ -8,24 +11,37 @@
     "pages/student-form/index",
     "pages/class-form/index",
     "pages/attendance/index",
-    "pages/renewals/index"
+    "pages/renewals/index",
+    "pages/leave-requests/index",
+    "pages/feedback-form/index",
+    "pages/operations/index",
+    "pages/crm-dashboard/index",
+    "pages/leads/index",
+    "pages/lead-form/index",
+    "pages/lead-detail/index",
+    "pages/followup-form/index",
+    "pages/trials/index",
+    "pages/trial-form/index",
+    "pages/trial-feedback/index",
+    "pages/lead-convert/index",
+    "pages/crm-stats/index"
   ],
   "window": {
-    "backgroundColor": "#F4F7F5",
+    "backgroundColor": "#F4F6FA",
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#12643B",
-    "navigationBarTitleText": "青训管家",
+    "navigationBarBackgroundColor": "#173B77",
+    "navigationBarTitleText": "南联青训",
     "navigationBarTextStyle": "white"
   },
   "tabBar": {
     "color": "#7A817D",
-    "selectedColor": "#12643B",
+    "selectedColor": "#173B77",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
-      { "pagePath": "pages/index/index", "text": "工作台" },
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/sessions/index", "text": "课程" },
       { "pagePath": "pages/students/index", "text": "学员" },
-      { "pagePath": "pages/classes/index", "text": "班级" },
       { "pagePath": "pages/profile/index", "text": "我的" }
     ]
   },

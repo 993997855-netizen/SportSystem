@@ -4,13 +4,14 @@
   <view class="profile card">
     <view class="avatar">{{student.initial}}</view>
     <view class="grow"><view class="name">{{student.name}}</view><view class="muted small">{{student.gender}} · 出生于 {{student.birthDate}}</view></view>
-    <view class="lesson-box {{student.remainingLessons <= 5 ? 'low' : ''}}"><text class="count">{{student.remainingLessons}}</text><text class="small">{{student.remainingLessons <= 5 ? '建议续费' : '剩余课时'}}</text></view>
+    <view class="lesson-box {{student.lowBalance ? 'low' : ''}}"><text class="count">{{student.remainingLessons}}</text><text class="small">{{student.lowBalance ? '建议续费' : '剩余课时'}}</text></view>
   </view>
 
   <view class="card">
     <view class="between"><view class="card-title">基本信息</view><view><text class="invite" wx:if="{{role === 'admin' && mode === 'cloud'}}" bindtap="parentInvite">家长邀请码</text><text class="edit" wx:if="{{role === 'admin'}}" bindtap="edit">编辑</text></view></view>
     <view class="info"><text class="muted">家长姓名</text><text>{{student.guardianName}}</text></view>
     <view class="info"><text class="muted">联系电话</text><text>{{student.guardianPhone}}</text></view>
+    <view class="info"><text class="muted">紧急联系人</text><text class="right">{{student.emergencyContact || '未登记'}}</text></view>
     <view class="info"><text class="muted">累计购课</text><text>{{student.totalLessons}} 节</text></view>
     <view class="info"><text class="muted">健康备注</text><text class="right">{{student.healthNotes || '无'}}</text></view>
   </view>
@@ -20,6 +21,15 @@
     <view class="between"><view><view class="card-title">{{item.name}}</view><view class="muted small mt">{{item.schedule}} · {{item.venue}}</view></view><view class="tag">{{item.coachName}}</view></view>
   </view>
   <view class="empty card" wx:if="{{student.classes.length === 0}}">暂未分班</view>
+
+  <view class="section-title" wx:if="{{student.recruitment}}">招生信息</view><view class="card" wx:if="{{student.recruitment}}"><view class="info"><text class="muted">客户来源</text><text>{{student.recruitment.source}}</text></view><view class="info"><text class="muted">原负责人</text><text>{{student.recruitment.ownerCoachName}}</text></view><view class="info"><text class="muted">首次咨询</text><text>{{student.recruitment.firstContactAt}}</text></view><view class="info"><text class="muted">体验日期</text><text>{{student.recruitment.trialDate || '未记录'}}</text></view><view class="info"><text class="muted">体验教练</text><text>{{student.recruitment.trialCoachName || '未记录'}}</text></view><view class="info"><text class="muted">成交日期</text><text>{{student.recruitment.convertedAt}}</text></view><view class="muted small feedback-content" wx:if="{{student.recruitment.trialFeedback}}">体验评价：{{student.recruitment.trialFeedback}}</view></view>
+
+  <view class="section-title">训练反馈</view>
+  <view class="card feedback" wx:for="{{student.feedback}}" wx:key="id"><view class="between"><view class="card-title">{{item.coachName}}</view><view class="tag">表现 {{item.rating}}/5</view></view><view class="feedback-content">{{item.content}}</view><view><text class="feedback-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text></view><view class="muted small mt">{{item.createdAt}}</view></view>
+  <view class="empty card" wx:if="{{!student.feedback || student.feedback.length === 0}}">暂无训练反馈</view>
+
+  <view class="section-title">课时流水</view>
+  <view class="card"><view class="ledger" wx:for="{{student.lessonLedger}}" wx:key="id"><view><view>{{item.note}}</view><view class="muted small">{{item.createdAt}} · 余额 {{item.balanceAfter}}</view></view><text class="delta {{item.delta > 0 ? 'plus' : 'minus'}}">{{item.delta > 0 ? '+' : ''}}{{item.delta}}</text></view><view class="empty" wx:if="{{!student.lessonLedger || student.lessonLedger.length === 0}}">暂无课时流水</view></view>
 
   <view class="section-title">最近出勤</view>
   <view class="card">

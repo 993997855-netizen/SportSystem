@@ -19,11 +19,15 @@
     <button class="btn-primary bind" disabled="{{binding}}" loading="{{binding}}" bindtap="claimInvite">{{binding ? '正在绑定' : '立即绑定'}}</button>
   </view>
   <view class="card menu">
+    <view class="menu-item pressable" bindtap="sessions"><text>课程、报名与候补</text><text class="muted">›</text></view>
+    <view class="menu-item pressable" bindtap="leaves"><text>{{context.user.role === 'parent' ? '我的请假' : '请假审核'}}</text><text class="muted">›</text></view>
     <view class="menu-item pressable" wx:if="{{context.user.role !== 'coach'}}" bindtap="renewals"><text>续费与课时记录</text><text class="muted">›</text></view>
+    <view class="menu-item pressable" wx:if="{{context.user.role !== 'parent'}}" bindtap="operations"><text>南联运营后台</text><text class="muted">›</text></view>
+    <view class="menu-item pressable" wx:if="{{context.user.role === 'admin'}}" bindtap="classes"><text>班级与教练管理</text><text class="muted">›</text></view>
     <view class="menu-item"><text>数据模式</text><text class="muted">{{modeLabel}}</text></view>
-    <view class="menu-item"><text>版本</text><text class="muted">第一版 MVP</text></view>
+    <view class="menu-item"><text>版本</text><text class="muted">南联 V2</text></view>
   </view>
   <button wx:if="{{context.mode === 'local'}}" class="btn-secondary" bindtap="reset">重置演示数据</button>
-  <view class="tip">正式启用前，需要部署 clubApi 云函数、创建云环境并配置角色绑定。真实微信支付还需要商户号。</view>
+  <view class="tip">正式启用前，需要部署新版 clubApi、配置管理员 OPENID、数据库索引与未成年人隐私授权。当前续费仍为人工确认到账。</view>
 </view>
 </block>

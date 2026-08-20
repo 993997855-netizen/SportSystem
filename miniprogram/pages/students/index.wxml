@@ -7,7 +7,7 @@
   <view class="card pressable student" wx:for="{{filtered}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
     <view class="avatar">{{item.initial}}</view>
     <view class="grow">
-      <view class="between"><view class="name">{{item.name}}</view><view class="lessons {{item.remainingLessons <= 5 ? 'low' : ''}}">{{item.remainingLessons}} 节</view></view>
+      <view class="between"><view class="name">{{item.name}}</view><view class="lessons {{item.lowBalance ? 'low' : ''}}">{{item.remainingLessons}} 节</view></view>
       <view class="muted small meta">{{item.classNames || '未分班'}}</view>
       <view class="muted small">家长：{{item.guardianName}} · {{item.guardianPhone}}</view>
     </view>

@@ -11,7 +11,7 @@ Page({
       const [context, student] = await Promise.all([api.call("getContext"), api.call("getStudent", { id: this.data.id })]);
       student.initial = student.name ? student.name[0] : "学";
       student.attendance = student.attendance.map((item) => ({ ...item, statusLabel: attendanceLabels[item.status] }));
-      this.setData({ student, role: context.user.role, mode: context.mode, loading: false });
+      this.setData({ student: { ...student, lowBalance: Number(student.remainingLessons) <= 5 }, role: context.user.role, mode: context.mode, loading: false });
     } catch (error) { this.setData({ loading: false, error: "学员详情加载失败" }); }
   },
   edit() { wx.navigateTo({ url: `/pages/student-form/index?id=${this.data.id}` }); },
