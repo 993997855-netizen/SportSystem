@@ -10,7 +10,7 @@ Page({
       const [context, students] = await Promise.all([api.call("getContext"), api.call("listStudents")]);
       const studentId = this.data.studentId || (students[0] && students[0].id) || "";
       const sessions = await api.call("listSessions", { studentId });
-      this.setData({ role: context.user.role, students, studentId, sessions: sessions.map((item) => ({ ...item, shortDate: String(item.date || "").slice(5), statusLabel: item.myStatus === "booked" ? "已报名" : item.myStatus === "waiting_history" ? "历史候补" : item.myStatus === "leave_pending" ? "请假审核中" : item.classType === "ELITE" && context.user.role === "parent" ? "选拔制" : item.remaining > 0 ? `余${item.remaining}位` : "已满" })), loading: false });
+      this.setData({ role: context.user.role, students, studentId, sessions: sessions.map((item) => ({ ...item, shortDate: String(item.date || "").slice(5), statusLabel: item.myStatus === "booked" ? "已报名" : item.myStatus === "waiting_history" ? "历史候补" : item.myStatus === "leave_pending" ? "请假待审批" : item.myStatus === "leave_approved" ? "已请假 · 0课时" : item.myStatus === "leave_rejected" ? "请假被拒绝" : item.classType === "ELITE" && context.user.role === "parent" ? "选拔制" : item.remaining > 0 ? `余${item.remaining}位` : "已满" })), loading: false });
     } catch (error) { this.setData({ loading: false, error: "课程加载失败，请重试" }); }
     finally { wx.stopPullDownRefresh(); }
   },

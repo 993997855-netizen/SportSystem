@@ -92,8 +92,12 @@ function decorateSession(data, session, studentId) {
   const enrollment = data.enrollments.find((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "booked");
   const waiting = data.waitlist.filter((item) => item.sessionId === session.id && item.status === "waiting").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const waitIndex = waiting.findIndex((item) => item.studentId === studentId);
-  const leave = data.leaveRequests.find((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "pending");
-  return { ...session, classType: (clubClass || {}).classType || "REGULAR", classTypeLabel: classesV3.CLASS_TYPES[(clubClass || {}).classType] || "普通班", enrolledCount: count, trialCount: trials, totalCount: count + trials, remaining: Math.max(0, session.capacity - count - trials), isFull: count + trials >= Number(session.capacity || 0), myStatus: leave ? "leave_pending" : enrollment ? "booked" : waitIndex >= 0 ? "waiting_history" : "none", waitlistPosition: waitIndex >= 0 ? waitIndex + 1 : 0 };
+  const leave = data.leaveRequests.filter((item) => item.sessionId === session.id && item.studentId === studentId).sort((a, b) => String(b.submittedAt || b.createdAt).localeCompare(String(a.submittedAt || a.createdAt)))[0];
+  const records = data.attendance.filter((item) => item.sessionId === session.id && booked(data, session.id).some((row) => row.studentId === item.studentId));
+  const attendanceStats = { expected: count, present: 0, leave: 0, injured: 0, absent: 0, unmarked: count };
+  records.forEach((record) => { const key = record.status === "sick" ? "injured" : record.status; if (key in attendanceStats && key !== "expected" && key !== "unmarked") { attendanceStats[key] += 1; attendanceStats.unmarked = Math.max(0, attendanceStats.unmarked - 1); } });
+  const leaveStatus = leave && leave.status === "pending" ? "leave_pending" : leave && leave.status === "approved" ? "leave_approved" : leave && leave.status === "rejected" ? "leave_rejected" : "";
+  return { ...session, classType: (clubClass || {}).classType || "REGULAR", classTypeLabel: classesV3.CLASS_TYPES[(clubClass || {}).classType] || "普通班", enrolledCount: count, trialCount: trials, totalCount: count + trials, remaining: Math.max(0, session.capacity - count - trials), isFull: count + trials >= Number(session.capacity || 0), attendanceStats, myStatus: leaveStatus || (enrollment ? "booked" : waitIndex >= 0 ? "waiting_history" : "none"), leaveRequestId: leave ? leave.id : "", waitlistPosition: waitIndex >= 0 ? waitIndex + 1 : 0 };
 }
 function audit(data, role, action, targetType, targetId, detail) { const fields = detail && typeof detail === "object" ? detail : { detail: String(detail || "") }; data.auditLogs.unshift({ id: uid("log"), role, action, targetType, targetId, ...fields, createdAt: stamp() }); }
 function appendLedger(data, studentId, delta, type, referenceType, referenceId, note) {
@@ -103,6 +107,19 @@ function appendLedger(data, studentId, delta, type, referenceType, referenceId, 
   const item = { id: uid("tx"), studentId, type, delta, balanceAfter: student.remainingLessons, referenceType, referenceId, note, createdAt: stamp() };
   data.lessonLedger.unshift(item);
   return item;
+}
+function applyAttendanceRecord(data, session, studentId, status, context = {}) {
+  if (!(status in DEDUCTION)) throw new Error("无效出勤状态");
+  const existing = data.attendance.find((item) => item.sessionId === session.id && item.studentId === studentId);
+  const oldStatus = existing ? existing.status : "unmarked";
+  const previous = existing ? Number(existing.deductedLessons || 0) : 0;
+  const next = DEDUCTION[status];
+  const updatedAt = stamp();
+  if (existing) Object.assign(existing, { status, deductedLessons: next, source: context.source || existing.source || "ATTENDANCE", leaveRequestId: context.leaveRequestId || existing.leaveRequestId || "", operatorId: context.operatorId || existing.operatorId || "", updatedAt });
+  else data.attendance.push({ id: uid("a"), sessionId: session.id, classId: session.classId, studentId, date: session.date || context.date, status, deductedLessons: next, source: context.source || "ATTENDANCE", leaveRequestId: context.leaveRequestId || "", operatorId: context.operatorId || "", createdAt: updatedAt, updatedAt });
+  const lessonDelta = previous - next;
+  if (lessonDelta) appendLedger(data, studentId, lessonDelta, context.ledgerType || (lessonDelta < 0 ? "attendance" : "attendance_adjustment"), "session", session.id, context.note || `${session.title}${status === "present" ? "到课" : status === "absent" ? "缺勤" : "状态校正"}`);
+  return { oldStatus, newStatus: status, lessonDelta };
 }
 function saveStudentRecord(data, payload) {
   let studentId = payload.id;
@@ -176,7 +193,7 @@ async function call(action, input = {}) {
       if (role === "parent" && session.status !== "published") throw new Error("课程尚未发布");
       if (role === "coach" && !roleClassIds(data, role).includes(session.classId)) throw new Error("无权查看该课程");
       const studentId = input.studentId || ownStudentId; const result = decorateSession(data, session, studentId);
-      return { ...result, enrollments: booked(data, session.id).map((item) => ({ ...item, student: data.students.find((s) => s.id === item.studentId) })), waiting: data.waitlist.filter((item) => item.sessionId === session.id && item.status === "waiting").map((item, index) => ({ ...item, position: index + 1, student: data.students.find((s) => s.id === item.studentId) })) };
+      return { ...result, enrollments: booked(data, session.id).map((item) => ({ ...item, attendanceStatus: (data.attendance.find((record) => record.sessionId === session.id && record.studentId === item.studentId) || {}).status || "unmarked", student: data.students.find((s) => s.id === item.studentId) })), waiting: data.waitlist.filter((item) => item.sessionId === session.id && item.status === "waiting").map((item, index) => ({ ...item, position: index + 1, student: data.students.find((s) => s.id === item.studentId) })) };
     }
     case "saveSession": {
       assertRole(role, ["admin"]); const payload = input.session || {}; if (!payload.title || !payload.date || !payload.time || !payload.venue) throw new Error("课程信息不完整");
@@ -195,20 +212,28 @@ async function call(action, input = {}) {
     case "requestLeave": {
       assertRole(role, ["admin", "parent"]); const studentId = input.studentId || ownStudentId;
       if (!canAccessStudent(data, role, studentId)) throw new Error("无权提交该学员请假");
-      if (!data.enrollments.some((item) => item.sessionId === input.sessionId && item.studentId === studentId && item.status === "booked")) throw new Error("该学员尚未报名本课程");
-      if (data.leaveRequests.some((item) => item.sessionId === input.sessionId && item.studentId === studentId && item.status === "pending")) throw new Error("请假申请已提交");
-      const request = { id: uid("l"), sessionId: input.sessionId, studentId, reason: String(input.reason || "家长请假"), status: "pending", createdAt: stamp() }; data.leaveRequests.push(request); audit(data, role, "requestLeave", "leave", request.id, request.reason); save(data); return { ok: true };
+      const leaveSession = data.sessions.find((item) => item.id === input.sessionId); if (!leaveSession || !data.enrollments.some((item) => item.sessionId === input.sessionId && item.studentId === studentId && item.status === "booked")) throw new Error("该学员尚未报名本课程");
+      if (data.leaveRequests.some((item) => item.sessionId === input.sessionId && item.studentId === studentId && item.status === "pending")) throw new Error("请假申请已提交"); if (data.leaveRequests.some((item) => item.sessionId === input.sessionId && item.studentId === studentId && item.status === "approved")) throw new Error("该课程请假已经批准");
+      const submittedAt = stamp(); const request = { id: uid("l"), sessionId: input.sessionId, classId: leaveSession.classId, studentId, reason: String(input.reason || "家长请假"), status: "pending", submittedAt, createdAt: submittedAt, creatorId: userId }; data.leaveRequests.push(request); audit(data, role, "requestLeave", "leave", request.id, { studentId, sessionId: request.sessionId, leaveRequestId: request.id, operator: userId, oldStatus: "NONE", newStatus: "pending", lessonDelta: 0 }); save(data); return { ok: true, id: request.id };
+    }
+    case "cancelLeave": {
+      assertRole(role, ["admin", "parent"]); const request = data.leaveRequests.find((item) => item.id === input.id); if (!request) throw new Error("请假申请不存在"); if (!canAccessStudent(data, role, request.studentId)) throw new Error("无权撤销该请假");
+      if (request.status === "cancelled") return { ok: true, status: "cancelled", idempotent: true }; if (request.status === "approved") throw new Error("已批准请假请联系俱乐部管理员处理"); if (request.status !== "pending") throw new Error("当前请假状态不可撤销");
+      request.status = "cancelled"; request.cancelledAt = stamp(); request.cancelledBy = userId; audit(data, role, "cancelLeave", "leave", request.id, { studentId: request.studentId, sessionId: request.sessionId, leaveRequestId: request.id, operator: userId, oldStatus: "pending", newStatus: "cancelled", lessonDelta: 0 }); save(data); return { ok: true, status: "cancelled" };
     }
     case "listLeaveRequests": {
       const ids = visibleStudents(data, role).map((item) => item.id); const classIds = roleClassIds(data, role);
-      return data.leaveRequests.filter((item) => role === "admin" || (role === "parent" ? ids.includes(item.studentId) : classIds.includes((data.sessions.find((s) => s.id === item.sessionId) || {}).classId))).map((item) => ({ ...item, student: data.students.find((s) => s.id === item.studentId), session: data.sessions.find((s) => s.id === item.sessionId) })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return data.leaveRequests.filter((item) => role === "admin" || (role === "parent" ? ids.includes(item.studentId) : classIds.includes((data.sessions.find((s) => s.id === item.sessionId) || {}).classId))).map((item) => { const session = data.sessions.find((s) => s.id === item.sessionId); return { ...item, submittedAt: item.submittedAt || item.createdAt, student: data.students.find((s) => s.id === item.studentId), session, clubClass: data.classes.find((clubClass) => clubClass.id === (item.classId || (session || {}).classId)) }; }).sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)));
     }
     case "reviewLeave": {
-      assertRole(role, ["admin", "coach"]); const request = data.leaveRequests.find((item) => item.id === input.id); if (!request || request.status !== "pending") throw new Error("申请状态已变化");
-      const leaveSession = data.sessions.find((item) => item.id === request.sessionId); if (role === "coach" && (!leaveSession || !roleClassIds(data, role).includes(leaveSession.classId))) throw new Error("无权审批该课程请假");
-      request.status = input.approved ? "approved" : "rejected"; request.reviewedAt = stamp(); request.reviewNote = input.note || "";
-      if (input.approved) { const enrollment = data.enrollments.find((item) => item.sessionId === request.sessionId && item.studentId === request.studentId && item.status === "booked"); if (enrollment) enrollment.status = "leave"; }
-      audit(data, role, "reviewLeave", "leave", request.id, request.status); save(data); return { ok: true, promotedStudentId: null };
+      assertRole(role, ["admin"]); const request = data.leaveRequests.find((item) => item.id === input.id); if (!request) throw new Error("请假申请不存在"); const status = input.approved ? "approved" : "rejected";
+      if (request.status === status) return { ok: true, status, idempotent: true, lessonDelta: 0, promotedStudentId: null }; if (request.status !== "pending") throw new Error("申请状态已变化");
+      const leaveSession = data.sessions.find((item) => item.id === request.sessionId); if (!leaveSession) throw new Error("课程不存在"); let correction = { oldStatus: "unmarked", newStatus: "unmarked", lessonDelta: 0 };
+      if (input.approved) correction = applyAttendanceRecord(data, leaveSession, request.studentId, "leave", { source: "LEAVE_APPROVAL", leaveRequestId: request.id, operatorId: userId, ledgerType: "leave_correction", note: `${leaveSession.title}请假审批课时返还` });
+      request.status = status; request.reviewedAt = stamp(); request.reviewerId = userId; request.reviewNote = input.note || "";
+      audit(data, role, input.approved ? "approveLeave" : "rejectLeave", "leave", request.id, { studentId: request.studentId, sessionId: request.sessionId, leaveRequestId: request.id, operator: userId, oldStatus: "pending", newStatus: status, attendanceOldStatus: correction.oldStatus, attendanceNewStatus: correction.newStatus, lessonDelta: correction.lessonDelta });
+      if (correction.lessonDelta) audit(data, role, "leaveLessonCorrection", "student", request.studentId, { studentId: request.studentId, sessionId: request.sessionId, leaveRequestId: request.id, operator: userId, oldStatus: correction.oldStatus, newStatus: "leave", lessonDelta: correction.lessonDelta });
+      save(data); return { ok: true, status, idempotent: false, lessonDelta: correction.lessonDelta, promotedStudentId: null };
     }
     case "getAttendanceSheet": {
       assertRole(role, ["admin", "coach"]); let session = input.sessionId ? data.sessions.find((item) => item.id === input.sessionId) : data.sessions.find((item) => item.classId === input.classId && item.date === input.date);
@@ -216,12 +241,13 @@ async function call(action, input = {}) {
       if (role === "coach" && !roleClassIds(data, role).includes(session.classId)) throw new Error("无权点名该班级");
       const ids = session.id.startsWith("adhoc-") ? (data.classes.find((item) => item.id === session.classId) || {}).studentIds || [] : booked(data, session.id).map((item) => item.studentId);
       const trialStudents = data.trialBookings.filter((item) => item.sessionId === session.id && ["SCHEDULED", "COMPLETED", "NO_SHOW"].includes(item.status)).map((item) => ({ id: item.id, trialId: item.id, name: item.childName, initial: item.childName[0], attendanceStatus: item.attendanceStatus || "unmarked", isTrial: true }));
-      return { session, clubClass: data.classes.find((item) => item.id === session.classId), date: session.date, students: ids.map((studentId) => { const student = data.students.find((item) => item.id === studentId); const record = data.attendance.find((item) => item.sessionId === session.id && item.studentId === studentId); return { ...student, initial: student.name[0], attendanceStatus: record ? record.status : "unmarked" }; }), trialStudents };
+      return { session, clubClass: data.classes.find((item) => item.id === session.classId), date: session.date, students: ids.map((studentId) => { const student = data.students.find((item) => item.id === studentId); const record = data.attendance.find((item) => item.sessionId === session.id && item.studentId === studentId); const approvedLeave = data.leaveRequests.find((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "approved"); const attendanceStatus = record ? record.status : "unmarked"; return { ...student, initial: student.name[0], attendanceStatus, leaveApproved: Boolean(approvedLeave), leaveRequestId: approvedLeave ? approvedLeave.id : "", leaveLocked: Boolean(approvedLeave && attendanceStatus === "leave"), leaveOverride: Boolean(approvedLeave && attendanceStatus !== "leave") }; }), trialStudents };
     }
     case "submitAttendance": {
       assertRole(role, ["admin", "coach"]); const session = data.sessions.find((item) => item.id === input.sessionId) || { id: input.sessionId || `adhoc-${input.classId}-${input.date}`, classId: input.classId, date: input.date, title: "临时课程" };
       if (role === "coach" && !roleClassIds(data, role).includes(session.classId)) throw new Error("无权点名该班级");
-      (input.records || []).forEach((record) => { if (!(record.status in DEDUCTION)) throw new Error("无效出勤状态"); const existing = data.attendance.find((item) => item.sessionId === session.id && item.studentId === record.studentId); const prev = existing ? Number(existing.deductedLessons || 0) : 0; const next = DEDUCTION[record.status]; if (existing) Object.assign(existing, { status: record.status, deductedLessons: next, updatedAt: stamp() }); else data.attendance.push({ id: uid("a"), sessionId: session.id, classId: session.classId, studentId: record.studentId, date: session.date || input.date, status: record.status, deductedLessons: next, createdAt: stamp() }); const delta = prev - next; if (delta) appendLedger(data, record.studentId, delta, delta < 0 ? "attendance" : "attendance_adjustment", "session", session.id, `${session.title}${record.status === "present" ? "到课" : record.status === "absent" ? "缺勤" : "状态校正"}`); });
+      const allowedIds = session.id.startsWith("adhoc-") ? (data.classes.find((item) => item.id === session.classId) || {}).studentIds || [] : booked(data, session.id).map((item) => item.studentId); const allowed = new Set(allowedIds);
+      (input.records || []).forEach((record) => { if (!allowed.has(record.studentId)) throw new Error("点名名单包含非报名学员"); const approvedLeave = data.leaveRequests.find((item) => item.sessionId === session.id && item.studentId === record.studentId && item.status === "approved"); if (approvedLeave && record.status !== "leave" && !record.overrideApprovedLeave) throw new Error("已批准请假，修改状态前需要确认"); const correction = applyAttendanceRecord(data, session, record.studentId, record.status, { operatorId: userId, source: approvedLeave ? (record.status === "leave" ? "LEAVE_APPROVAL" : "LEAVE_ADMIN_OVERRIDE") : "ATTENDANCE", leaveRequestId: approvedLeave ? approvedLeave.id : "" }); if (approvedLeave && record.status !== "leave") audit(data, role, "overrideApprovedLeaveAttendance", "attendance", record.studentId, { studentId: record.studentId, sessionId: session.id, leaveRequestId: approvedLeave.id, operator: userId, oldStatus: correction.oldStatus, newStatus: correction.newStatus, lessonDelta: correction.lessonDelta }); });
       crm.applyTrialAttendance(data, session.id, input.trialRecords, { today: today(), stamp });
       audit(data, role, "submitAttendance", "session", session.id, `${(input.records || []).length}人`); save(data); return { ok: true };
     }
