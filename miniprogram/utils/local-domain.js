@@ -1,4 +1,5 @@
 const { today } = require("./format");
+const crm = require("./crm-domain");
 
 const STORAGE_KEY = "nanlianClubV2";
 const PACKAGES = {
@@ -52,6 +53,7 @@ function seed() {
 function load() {
   let data = wx.getStorageSync(STORAGE_KEY);
   if (!data || !data.sessions || !data.lessonLedger) { data = seed(); save(data); }
+  if (!data.leads) { crm.ensure(data, today()); save(data); }
   return data;
 }
 function save(data) { wx.setStorageSync(STORAGE_KEY, data); }
@@ -69,11 +71,12 @@ function canAccessStudent(data, role, studentId) { return visibleStudents(data, 
 function booked(data, sessionId) { return data.enrollments.filter((item) => item.sessionId === sessionId && item.status === "booked"); }
 function decorateSession(data, session, studentId) {
   const count = booked(data, session.id).length;
+  const trials = crm.trialCount(data, session.id);
   const enrollment = data.enrollments.find((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "booked");
   const waiting = data.waitlist.filter((item) => item.sessionId === session.id && item.status === "waiting").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const waitIndex = waiting.findIndex((item) => item.studentId === studentId);
   const leave = data.leaveRequests.find((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "pending");
-  return { ...session, enrolledCount: count, remaining: Math.max(0, session.capacity - count), myStatus: leave ? "leave_pending" : enrollment ? "booked" : waitIndex >= 0 ? "waiting" : "none", waitlistPosition: waitIndex >= 0 ? waitIndex + 1 : 0 };
+  return { ...session, enrolledCount: count, trialCount: trials, totalCount: count + trials, remaining: Math.max(0, session.capacity - count - trials), myStatus: leave ? "leave_pending" : enrollment ? "booked" : waitIndex >= 0 ? "waiting" : "none", waitlistPosition: waitIndex >= 0 ? waitIndex + 1 : 0 };
 }
 function audit(data, role, action, targetType, targetId, detail) { data.auditLogs.unshift({ id: uid("log"), role, action, targetType, targetId, detail, createdAt: stamp() }); }
 function appendLedger(data, studentId, delta, type, referenceType, referenceId, note) {
@@ -84,9 +87,15 @@ function appendLedger(data, studentId, delta, type, referenceType, referenceId, 
   data.lessonLedger.unshift(item);
   return item;
 }
+function saveStudentRecord(data, payload) {
+  let studentId = payload.id;
+  if (studentId) { const index = data.students.findIndex((item) => item.id === studentId); if (index < 0) throw new Error("学员不存在"); const old = data.students[index]; data.students[index] = { ...old, ...payload, remainingLessons: old.remainingLessons, totalLessons: old.totalLessons }; }
+  else { const lessons = Math.max(0, Number(payload.remainingLessons || 0)); studentId = uid("s"); data.students.push({ ...payload, id: studentId, remainingLessons: lessons, totalLessons: lessons, classIds: payload.classIds || [], status: "active" }); if (lessons) data.lessonLedger.unshift({ id: uid("tx"), studentId, type: "opening", delta: lessons, balanceAfter: lessons, referenceType: "student", referenceId: studentId, note: "建档期初课时", createdAt: stamp() }); }
+  return { id: studentId };
+}
 function promoteWaitlist(data, sessionId) {
   const session = data.sessions.find((item) => item.id === sessionId);
-  if (!session || booked(data, sessionId).length >= session.capacity) return null;
+  if (!session || booked(data, sessionId).length + crm.trialCount(data, sessionId) >= session.capacity) return null;
   const next = data.waitlist.filter((item) => item.sessionId === sessionId && item.status === "waiting").sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
   if (!next) return null;
   next.status = "promoted"; next.promotedAt = stamp();
@@ -97,9 +106,12 @@ function promoteWaitlist(data, sessionId) {
 async function call(action, input = {}) {
   const data = load();
   const role = input.previewRole || "admin";
+  const userId = role === "admin" ? "admin" : role === "coach" ? "coach1" : "parent1";
+  const userName = role === "admin" ? "南联管理员" : role === "coach" ? "游导" : "陈女士";
   const ownStudentId = visibleStudents(data, role)[0] && visibleStudents(data, role)[0].id;
+  if (crm.handles(action)) return crm.call(action, input, { data, role, userId, userName, today: today(), uid, stamp, audit, save, packages: PACKAGES, createStudent: async (student) => saveStudentRecord(data, student) });
   switch (action) {
-    case "getContext": return { mode: "local", user: { id: `local-${role}`, name: role === "admin" ? "南联管理员" : role === "coach" ? "游导" : "陈女士", role }, needsBinding: false };
+    case "getContext": return { mode: "local", user: { id: userId, name: userName, role }, needsBinding: false };
     case "getDashboard": {
       const students = visibleStudents(data, role); const ids = students.map((item) => item.id); const classIds = roleClassIds(data, role);
       const parentClassIds = ((students[0] || {}).classIds || []);
@@ -116,17 +128,12 @@ async function call(action, input = {}) {
     case "getStudent": {
       if (!canAccessStudent(data, role, input.id)) throw new Error("无权查看该学员");
       const student = data.students.find((item) => item.id === input.id);
-      return { ...student, initial: student.name[0], classes: data.classes.filter((item) => (student.classIds || []).includes(item.id)), attendance: data.attendance.filter((item) => item.studentId === input.id).sort((a, b) => b.date.localeCompare(a.date)), renewals: role === "coach" ? [] : data.renewals.filter((item) => item.studentId === input.id), feedback: data.feedback.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), lessonLedger: data.lessonLedger.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) };
+      const lead = data.leads.find((item) => item.id === student.crmLeadId || item.convertedStudentId === student.id); const trial = lead && data.trialBookings.filter((item) => item.leadId === lead.id).sort((a, b) => b.trialDate.localeCompare(a.trialDate))[0];
+      return { ...student, initial: student.name[0], classes: data.classes.filter((item) => (student.classIds || []).includes(item.id)), attendance: data.attendance.filter((item) => item.studentId === input.id).sort((a, b) => b.date.localeCompare(a.date)), renewals: role === "coach" ? [] : data.renewals.filter((item) => item.studentId === input.id), feedback: data.feedback.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), lessonLedger: data.lessonLedger.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), recruitment: lead ? { source: lead.source, ownerCoachName: lead.ownerCoachName, firstContactAt: lead.createdAt, trialDate: (trial || {}).trialDate || "", trialCoachName: (trial || {}).coachName || "", trialFeedback: ((trial || {}).feedback || {}).summary || "", convertedAt: lead.convertedAt } : null };
     }
     case "saveStudent": {
       assertRole(role, ["admin"]); const payload = input.student || {};
-      if (payload.id) { const index = data.students.findIndex((item) => item.id === payload.id); const old = data.students[index]; data.students[index] = { ...old, ...payload, remainingLessons: old.remainingLessons, totalLessons: old.totalLessons }; }
-      else {
-        const lessons = Math.max(0, Number(payload.remainingLessons || 0)); const studentId = uid("s");
-        data.students.push({ ...payload, id: studentId, remainingLessons: lessons, totalLessons: lessons, classIds: payload.classIds || [], status: "active" });
-        if (lessons) data.lessonLedger.unshift({ id: uid("tx"), studentId, type: "opening", delta: lessons, balanceAfter: lessons, referenceType: "student", referenceId: studentId, note: "建档期初课时", createdAt: stamp() });
-      }
-      audit(data, role, "saveStudent", "student", payload.id || "new", payload.name); save(data); return { ok: true };
+      const result = saveStudentRecord(data, payload); audit(data, role, "saveStudent", "student", result.id, payload.name); save(data); return { ok: true, id: result.id };
     }
     case "listClasses": return data.classes.filter((item) => role === "admin" || roleClassIds(data, role).includes(item.id)).map((item) => ({ ...item, studentCount: item.studentIds.length }));
     case "getClass": assertRole(role, ["admin"]); return { ...data.classes.find((item) => item.id === input.id) };
@@ -158,7 +165,7 @@ async function call(action, input = {}) {
       const session = data.sessions.find((item) => item.id === input.sessionId); const student = data.students.find((item) => item.id === studentId);
       if (!session || session.status !== "published") throw new Error("课程暂不可报名"); if (session.enrollmentMode === "fixed" && role !== "admin") throw new Error("固定梯队课程由管理员统一排入"); if (student.remainingLessons <= 0) throw new Error("剩余课时不足，请先续费");
       if (data.enrollments.some((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "booked")) return { status: "booked", message: "已报名" };
-      if (booked(data, session.id).length >= session.capacity) { if (!data.waitlist.some((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "waiting")) data.waitlist.push({ id: uid("w"), sessionId: session.id, studentId, status: "waiting", createdAt: stamp() }); audit(data, role, "joinWaitlist", "session", session.id, student.name); save(data); return { status: "waiting", message: "名额已满，已加入候补" }; }
+      if (booked(data, session.id).length + crm.trialCount(data, session.id) >= session.capacity) { if (!data.waitlist.some((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "waiting")) data.waitlist.push({ id: uid("w"), sessionId: session.id, studentId, status: "waiting", createdAt: stamp() }); audit(data, role, "joinWaitlist", "session", session.id, student.name); save(data); return { status: "waiting", message: "名额已满，已加入候补" }; }
       data.enrollments.push({ id: uid("e"), sessionId: session.id, studentId, status: "booked", createdAt: stamp() }); audit(data, role, "enroll", "session", session.id, student.name); save(data); return { status: "booked", message: "报名成功" };
     }
     case "requestLeave": {
@@ -184,12 +191,14 @@ async function call(action, input = {}) {
       if (!session) session = { id: `adhoc-${input.classId}-${input.date}`, classId: input.classId, date: input.date, title: (data.classes.find((c) => c.id === input.classId) || {}).name || "临时课程" };
       if (role === "coach" && !roleClassIds(data, role).includes(session.classId)) throw new Error("无权点名该班级");
       const ids = session.id.startsWith("adhoc-") ? (data.classes.find((item) => item.id === session.classId) || {}).studentIds || [] : booked(data, session.id).map((item) => item.studentId);
-      return { session, clubClass: data.classes.find((item) => item.id === session.classId), date: session.date, students: ids.map((studentId) => { const student = data.students.find((item) => item.id === studentId); const record = data.attendance.find((item) => item.sessionId === session.id && item.studentId === studentId); return { ...student, initial: student.name[0], attendanceStatus: record ? record.status : "unmarked" }; }) };
+      const trialStudents = data.trialBookings.filter((item) => item.sessionId === session.id && ["SCHEDULED", "COMPLETED", "NO_SHOW"].includes(item.status)).map((item) => ({ id: item.id, trialId: item.id, name: item.childName, initial: item.childName[0], attendanceStatus: item.attendanceStatus || "unmarked", isTrial: true }));
+      return { session, clubClass: data.classes.find((item) => item.id === session.classId), date: session.date, students: ids.map((studentId) => { const student = data.students.find((item) => item.id === studentId); const record = data.attendance.find((item) => item.sessionId === session.id && item.studentId === studentId); return { ...student, initial: student.name[0], attendanceStatus: record ? record.status : "unmarked" }; }), trialStudents };
     }
     case "submitAttendance": {
       assertRole(role, ["admin", "coach"]); const session = data.sessions.find((item) => item.id === input.sessionId) || { id: input.sessionId || `adhoc-${input.classId}-${input.date}`, classId: input.classId, date: input.date, title: "临时课程" };
       if (role === "coach" && !roleClassIds(data, role).includes(session.classId)) throw new Error("无权点名该班级");
       (input.records || []).forEach((record) => { if (!(record.status in DEDUCTION)) throw new Error("无效出勤状态"); const existing = data.attendance.find((item) => item.sessionId === session.id && item.studentId === record.studentId); const prev = existing ? Number(existing.deductedLessons || 0) : 0; const next = DEDUCTION[record.status]; if (existing) Object.assign(existing, { status: record.status, deductedLessons: next, updatedAt: stamp() }); else data.attendance.push({ id: uid("a"), sessionId: session.id, classId: session.classId, studentId: record.studentId, date: session.date || input.date, status: record.status, deductedLessons: next, createdAt: stamp() }); const delta = prev - next; if (delta) appendLedger(data, record.studentId, delta, delta < 0 ? "attendance" : "attendance_adjustment", "session", session.id, `${session.title}${record.status === "present" ? "到课" : record.status === "absent" ? "缺勤" : "状态校正"}`); });
+      crm.applyTrialAttendance(data, session.id, input.trialRecords, { today: today(), stamp });
       audit(data, role, "submitAttendance", "session", session.id, `${(input.records || []).length}人`); save(data); return { ok: true };
     }
     case "getLessonLedger": { if (!canAccessStudent(data, role, input.studentId)) throw new Error("无权查看课时"); return data.lessonLedger.filter((item) => item.studentId === input.studentId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
@@ -205,7 +214,7 @@ async function call(action, input = {}) {
     case "confirmRenewal": { assertRole(role, ["admin"]); const renewal = data.renewals.find((item) => item.id === input.id); if (!renewal || renewal.status !== "pending") throw new Error("订单状态已变化"); renewal.status = "paid"; renewal.paidAt = stamp(); const student = data.students.find((item) => item.id === renewal.studentId); student.totalLessons += renewal.lessons; appendLedger(data, renewal.studentId, renewal.lessons, "purchase", "renewal", renewal.id, `${renewal.name || "课包"}到账`); audit(data, role, "confirmRenewal", "renewal", renewal.id, `${renewal.amount}元`); save(data); return { ok: true }; }
     case "createInvite": assertRole(role, ["admin"]); return { code: "演示模式" };
     case "claimInvite": return { ok: true };
-    case "resetDemo": wx.setStorageSync(STORAGE_KEY, seed()); return { ok: true };
+    case "resetDemo": { const demo = seed(); crm.ensure(demo, today()); wx.setStorageSync(STORAGE_KEY, demo); return { ok: true }; }
     default: throw new Error(`暂不支持操作：${action}`);
   }
 }

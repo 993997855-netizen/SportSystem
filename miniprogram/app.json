@@ -14,7 +14,17 @@
     "pages/renewals/index",
     "pages/leave-requests/index",
     "pages/feedback-form/index",
-    "pages/operations/index"
+    "pages/operations/index",
+    "pages/crm-dashboard/index",
+    "pages/leads/index",
+    "pages/lead-form/index",
+    "pages/lead-detail/index",
+    "pages/followup-form/index",
+    "pages/trials/index",
+    "pages/trial-form/index",
+    "pages/trial-feedback/index",
+    "pages/lead-convert/index",
+    "pages/crm-stats/index"
   ],
   "window": {
     "backgroundColor": "#F4F6FA",

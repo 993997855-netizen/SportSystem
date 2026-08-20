@@ -22,6 +22,8 @@
   </view>
   <view class="empty card" wx:if="{{student.classes.length === 0}}">暂未分班</view>
 
+  <view class="section-title" wx:if="{{student.recruitment}}">招生信息</view><view class="card" wx:if="{{student.recruitment}}"><view class="info"><text class="muted">客户来源</text><text>{{student.recruitment.source}}</text></view><view class="info"><text class="muted">原负责人</text><text>{{student.recruitment.ownerCoachName}}</text></view><view class="info"><text class="muted">首次咨询</text><text>{{student.recruitment.firstContactAt}}</text></view><view class="info"><text class="muted">体验日期</text><text>{{student.recruitment.trialDate || '未记录'}}</text></view><view class="info"><text class="muted">体验教练</text><text>{{student.recruitment.trialCoachName || '未记录'}}</text></view><view class="info"><text class="muted">成交日期</text><text>{{student.recruitment.convertedAt}}</text></view><view class="muted small feedback-content" wx:if="{{student.recruitment.trialFeedback}}">体验评价：{{student.recruitment.trialFeedback}}</view></view>
+
   <view class="section-title">训练反馈</view>
   <view class="card feedback" wx:for="{{student.feedback}}" wx:key="id"><view class="between"><view class="card-title">{{item.coachName}}</view><view class="tag">表现 {{item.rating}}/5</view></view><view class="feedback-content">{{item.content}}</view><view><text class="feedback-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text></view><view class="muted small mt">{{item.createdAt}}</view></view>
   <view class="empty card" wx:if="{{!student.feedback || student.feedback.length === 0}}">暂无训练反馈</view>

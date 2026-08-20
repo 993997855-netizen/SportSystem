@@ -31,6 +31,7 @@ Page({
   goSessions() { wx.switchTab({ url: "/pages/sessions/index" }); },
   goLeaves() { wx.navigateTo({ url: "/pages/leave-requests/index" }); },
   goOperations() { wx.navigateTo({ url: "/pages/operations/index" }); },
+  goCrm() { wx.navigateTo({ url: "/pages/crm-dashboard/index" }); },
   goRenewals() { wx.navigateTo({ url: "/pages/renewals/index" }); },
   goStat4() { if (this.data.dashboard.role === "coach") this.goClasses(); else this.goRenewals(); },
   goStudent(event) { wx.navigateTo({ url: `/pages/student-detail/index?id=${event.currentTarget.dataset.id}` }); },

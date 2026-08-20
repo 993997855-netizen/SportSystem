@@ -45,7 +45,7 @@
     "disableSWC": true
   },
   "appid": "wx6082ff5e4a142c74",
-  "projectname": "nanlian-club-v2",
+  "projectname": "nanlian-club-v3",
   "libVersion": "2.20.1",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "condition": {
@@ -56,7 +56,72 @@
   "compileType": "miniprogram",
   "srcMiniprogramRoot": "miniprogram/",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "miniprogram/pages/example"
+      },
+      {
+        "type": "folder",
+        "value": "miniprogram/components"
+      },
+      {
+        "type": "folder",
+        "value": "miniprogram/images/icons"
+      },
+      {
+        "type": "suffix",
+        "value": ".svg"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/envList.js"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/utils/local-service.js"
+      },
+      {
+        "type": "prefix",
+        "value": "miniprogram/images/ai_"
+      },
+      {
+        "type": "prefix",
+        "value": "miniprogram/images/create_"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/avatar.png"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/cloud_dev.png"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/database.png"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/database_add.png"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/default-goods-image.png"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/env-select.png"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/function_deploy.png"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/scf-enter.png"
+      }
+    ],
     "include": []
   },
   "editorSetting": {
