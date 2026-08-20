@@ -14,5 +14,5 @@
   </view>
   <view class="empty card" wx:if="{{filtered.length === 0}}">{{keyword ? '没有找到符合条件的学员' : '还没有学员，先创建第一份档案'}}<view class="retry" wx:if="{{!keyword && role === 'admin'}}" bindtap="add">创建学员</view></view>
   </block>
-  <button class="fab" wx:if="{{role === 'admin'}}" bindtap="add">＋</button>
+  <floating-add-button wx:if="{{role === 'admin'}}" bind:add="add" />
 </view>

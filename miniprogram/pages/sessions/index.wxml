@@ -13,5 +13,5 @@
     </view>
     <view class="empty card" wx:if="{{sessions.length === 0}}">暂未发布课程</view>
   </block>
-  <button wx:if="{{role === 'admin'}}" class="fab" bindtap="add">＋</button>
+  <floating-add-button wx:if="{{role === 'admin'}}" bind:add="add" />
 </view>

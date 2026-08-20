@@ -11,7 +11,6 @@ page {
 .btn-secondary { background:#eaf0f9; color:#173b77; }
 .tag { background:#eaf0f9; color:#173b77; }
 .tag.gold { background:#fff6da; color:#8c6700; }
-.fab { background:#173b77; box-shadow:0 14rpx 34rpx rgba(23,59,119,.28); }
 view, text, button, input, textarea, picker { box-sizing: border-box; }
 .page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); }
 .page-enter { animation: fade-up .28s ease-out both; }
@@ -38,8 +37,6 @@ view, text, button, input, textarea, picker { box-sizing: border-box; }
 .textarea { min-height: 150rpx; }
 .divider { height: 1rpx; background: #edf0ee; margin: 24rpx 0; }
 .empty { text-align: center; color: #8a918d; padding: 80rpx 20rpx; }
-.fab { position: fixed; right: 32rpx; bottom: calc(136rpx + env(safe-area-inset-bottom)); width: 104rpx; height: 104rpx; padding: 0; border-radius: 52rpx; background: #12643b; color: #fff; font-size: 48rpx; line-height: 104rpx; box-shadow: 0 14rpx 34rpx rgba(18, 100, 59, .28); animation: fab-in .25s ease-out both; }
-.fab::after { border: 0; }
 .loading-state { padding: 64rpx 20rpx; text-align: center; color: #7a817d; }
 .loading-dot { display: inline-block; width: 12rpx; height: 12rpx; margin: 0 7rpx; border-radius: 50%; background: #65a983; animation: pulse 1s ease-in-out infinite; }
 .loading-dot:nth-child(2) { animation-delay: .14s; }.loading-dot:nth-child(3) { animation-delay: .28s; }
@@ -56,5 +53,4 @@ view, text, button, input, textarea, picker { box-sizing: border-box; }
 .score-grid { display:grid; grid-template-columns:1fr 1fr; gap:16rpx; }.score-item { background:#f4f6fa; border-radius:16rpx; padding:20rpx; }.score-label { font-size:24rpx; margin-bottom:12rpx; }.score-options { display:flex; gap:8rpx; }.score { width:42rpx; height:42rpx; line-height:42rpx; text-align:center; border-radius:12rpx; background:#fff; color:#7a817d; }.score.active { background:#173b77; color:#fff; }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(16rpx); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fab-in { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
 @keyframes pulse { 0%, 100% { opacity: .3; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
