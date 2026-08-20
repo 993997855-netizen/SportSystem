@@ -1,29 +1,51 @@
-<!--index.wxml-->
-<view class="container">
-  <view class="title">快速了解云开发</view>
-  <view class="top_tip">免鉴权接口调用 免部署后台 高并发</view>
-  <view class="power" wx:key="title" wx:for="{{powerList}}" wx:for-item="power">
-    <view class="power_info" data-index="{{index}}" data-type="{{ power.type }}" bindtap="onClickPowerInfo">
-      <view class="power_info_text">
-        <view class="power_info_text_title">
-          {{power.title}}
-          <view class="power_info_text_tag" wx:if="{{power.tag}}">{{power.tag}}</view>
-        </view>
-        <view class="power_info_text_tip">{{power.tip}}</view>
-      </view>
-      <image wx:if="{{!power.showItem && power.item.length}}" class="power_info_more" src="../../images/arrow.svg"></image>
-      <image wx:if="{{power.showItem && power.item.length}}" class="power_info_less" src="../../images/arrow.svg"></image>
-      <image wx:if="{{!power.item.length}}" class="power_item_icon" src="../../images/arrow.svg"></image>
+<view class="hero">
+  <view class="between">
+    <view>
+      <view class="eyebrow">{{today}}</view>
+      <view class="hello">你好，{{user.name || '用户'}}</view>
+      <view class="hero-sub">{{roleLabel}}工作台</view>
     </view>
-    <view wx:if="{{power.showItem}}">
-      <view wx:key="title" wx:for="{{power.item}}">
-        <view class="line"></view>
-        <view class="power_item" bindtap="jumpPage" data-type="{{ item.type }}" data-page="{{item.page}}">
-          <view class="power_item_title">{{item.title}}</view>
-          <image class="power_item_icon" src="../../images/arrow.svg"></image>
-        </view>
+    <view class="ball">⚽</view>
+  </view>
+</view>
+
+<view class="loading-state" wx:if="{{loading}}"><view><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view><view class="small">正在加载工作台</view></view>
+<view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+<view class="page page-enter content" wx:else>
+  <view class="stats">
+    <view class="stat pressable" bindtap="goStudents"><text class="stat-value">{{dashboard.studentCount}}</text><text class="stat-label">在读学员</text></view>
+    <view class="stat pressable" bindtap="goClasses"><text class="stat-value">{{dashboard.classCount}}</text><text class="stat-label">当前班级</text></view>
+    <view class="stat pressable" bindtap="goStudents"><text class="stat-value warn">{{dashboard.lowBalance}}</text><text class="stat-label">课时不足</text></view>
+    <view class="stat pressable" bindtap="goStat4"><text class="stat-value">{{stat4Value}}</text><text class="stat-label">{{stat4Label}}</text></view>
+  </view>
+
+  <view class="section-title">快捷操作</view>
+  <view class="quick-grid">
+    <view class="quick pressable" wx:if="{{dashboard.role !== 'parent'}}" bindtap="goClasses"><view class="quick-icon green">✓</view><text>上课点名</text></view>
+    <view class="quick pressable" wx:else bindtap="goRenewals"><view class="quick-icon green">＋</view><text>课时续费</text></view>
+    <view class="quick pressable" bindtap="goStudents"><view class="quick-icon blue">人</view><text>{{dashboard.role === 'parent' ? '孩子档案' : '学员档案'}}</text></view>
+    <view class="quick pressable" wx:if="{{dashboard.role !== 'coach'}}" bindtap="goRenewals"><view class="quick-icon orange">¥</view><text>续费记录</text></view>
+    <view class="quick pressable" wx:else bindtap="goStudents"><view class="quick-icon orange">!</view><text>课时提醒</text></view>
+  </view>
+
+  <view class="section-title">我的班级</view>
+  <view class="card class-card" wx:for="{{dashboard.classes}}" wx:key="id">
+    <view class="between">
+      <view class="grow">
+        <view class="class-name">{{item.name}}</view>
+        <view class="muted small class-meta">{{item.schedule}} · {{item.venue}}</view>
+        <view class="small">教练：{{item.coachName}}</view>
       </view>
+      <button wx:if="{{dashboard.role !== 'parent'}}" class="mini-btn" data-id="{{item.id}}" bindtap="takeAttendance">点名</button>
     </view>
   </view>
-  <cloud-tip-modal showTipProps="{{showTip}}" title="{{title}}" content="{{content}}"></cloud-tip-modal>
+  <view class="empty card" wx:if="{{dashboard.classes.length === 0}}">暂无已分配班级</view>
+
+  <view class="section-title">{{attentionTitle}}</view>
+  <view class="card pressable student-row" wx:for="{{dashboard.recentStudents}}" wx:key="id" data-id="{{item.id}}" bindtap="goStudent">
+    <view class="avatar">{{item.initial}}</view>
+    <view class="grow"><view class="student-name">{{item.name}}</view><view class="muted small">家长：{{item.guardianName}}</view></view>
+    <view class="balance {{item.remainingLessons <= 5 ? 'low' : ''}}"><text>{{item.remainingLessons}}</text><text class="small">节</text></view>
+  </view>
+  <view class="empty card" wx:if="{{dashboard.recentStudents.length === 0}}">暂无学员数据</view>
 </view>

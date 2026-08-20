@@ -1,0 +1,26 @@
+<view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text><view class="small">正在准备点名表</view></view>
+<view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+<view class="page page-enter" wx:else>
+  <view class="card header-card">
+    <view class="between"><view><view class="name">{{clubClass.name}}</view><view class="muted small">{{clubClass.coachName}} · {{clubClass.venue}}</view></view><picker mode="date" value="{{date}}" end="{{today}}" bindchange="date"><view class="date">{{date}}⌄</view></picker></view>
+    <view class="rule">扣课规则：到课、缺勤扣1节；请假、伤病不扣课。再次保存会自动校正，不会重复扣除。</view>
+  </view>
+
+  <view class="summary-card">
+    <view><text class="summary-value">{{summary.marked}}/{{students.length}}</text><text class="summary-label">已点名</text></view>
+    <view><text class="summary-value present-text">{{summary.present}}</text><text class="summary-label">到课</text></view>
+    <view><text class="summary-value warning-text">{{summary.leave + summary.sick}}</text><text class="summary-label">请假/伤病</text></view>
+    <view><text class="summary-value danger-text">{{summary.absent}}</text><text class="summary-label">缺勤</text></view>
+  </view>
+
+  <view class="between title-row"><view class="section-title">学员名单（{{students.length}}）</view><text class="all" bindtap="allPresent">全部到课</text></view>
+  <view class="card student {{item.attendanceStatus === 'unmarked' ? 'unmarked' : ''}}" wx:for="{{students}}" wx:key="id">
+    <view class="between person"><view><view class="student-name">{{item.name}}</view><view class="muted small">剩余 {{item.remainingLessons}} 节</view></view><view class="health" wx:if="{{item.healthNotes && item.healthNotes !== '无'}}">健康备注</view></view>
+    <view class="status-grid">
+      <view wx:for="{{statuses}}" wx:for-item="status" wx:key="value" class="status {{item.attendanceStatus === status.value ? 'active ' + status.value : ''}}" data-student="{{item.id}}" data-status="{{status.value}}" catchtap="status">{{status.label}}</view>
+    </view>
+    <view class="health-note" wx:if="{{item.healthNotes && item.healthNotes !== '无'}}">{{item.healthNotes}}</view>
+  </view>
+  <view class="empty card" wx:if="{{students.length === 0}}">该班级还没有学员，请管理员先分配学员。</view>
+  <view class="sticky-action"><button class="btn-primary submit" disabled="{{saving || students.length === 0}}" loading="{{saving}}" bindtap="submit">{{saving ? '正在保存' : (summary.unmarked ? '还有 ' + summary.unmarked + ' 人未点名' : '保存本次点名')}}</button></view>
+</view>

@@ -45,7 +45,7 @@
     "disableSWC": true
   },
   "appid": "wx6082ff5e4a142c74",
-  "projectname": "quickstart-wx-cloud",
+  "projectname": "SportSystem-青训管家",
   "libVersion": "2.20.1",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "condition": {

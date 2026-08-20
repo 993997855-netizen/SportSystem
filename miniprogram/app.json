@@ -1,14 +1,33 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/example/index"
+    "pages/students/index",
+    "pages/classes/index",
+    "pages/profile/index",
+    "pages/student-detail/index",
+    "pages/student-form/index",
+    "pages/class-form/index",
+    "pages/attendance/index",
+    "pages/renewals/index"
   ],
   "window": {
-    "backgroundColor": "#F6F6F6",
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#F6F6F6",
-    "navigationBarTitleText": "云开发 QuickStart",
-    "navigationBarTextStyle": "black"
+    "backgroundColor": "#F4F7F5",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#12643B",
+    "navigationBarTitleText": "青训管家",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#7A817D",
+    "selectedColor": "#12643B",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "工作台" },
+      { "pagePath": "pages/students/index", "text": "学员" },
+      { "pagePath": "pages/classes/index", "text": "班级" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",

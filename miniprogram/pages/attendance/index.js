@@ -1,0 +1,60 @@
+const api = require("../../utils/api");
+const { today } = require("../../utils/format");
+
+Page({
+  data: { classId: "", date: today(), today: today(), clubClass: {}, students: [], saving: false, loading: true, error: "", dirty: false, summary: { marked: 0, unmarked: 0, present: 0, leave: 0, sick: 0, absent: 0 }, statuses: [
+    { value: "present", label: "到课" }, { value: "leave", label: "请假" }, { value: "sick", label: "伤病" }, { value: "absent", label: "缺勤" }
+  ] },
+  onLoad(options) { this.setData({ classId: options.classId || "" }); this.load(); },
+  async load() {
+    if (!this.data.classId) { this.setData({ loading: false, error: "缺少班级信息，请返回重试" }); return; }
+    this.setData({ loading: true, error: "" });
+    try {
+      const sheet = await api.call("getAttendanceSheet", { classId: this.data.classId, date: this.data.date });
+      this.applyStudents(sheet.students, false, { clubClass: sheet.clubClass, loading: false });
+    } catch (error) { this.setData({ loading: false, error: "点名表加载失败" }); }
+  },
+  date(event) {
+    const nextDate = event.detail.value;
+    if (!this.data.dirty) { this.setData({ date: nextDate }, () => this.load()); return; }
+    wx.showModal({ title: "切换日期？", content: "当前点名尚未保存，切换后本次选择会丢失。", success: (result) => {
+      if (result.confirm) { this.clearDirty(); this.setData({ date: nextDate }, () => this.load()); }
+    } });
+  },
+  applyStudents(students, dirty, extra = {}) {
+    const summary = { marked: 0, unmarked: 0, present: 0, leave: 0, sick: 0, absent: 0 };
+    students.forEach((item) => {
+      const status = item.attendanceStatus || "unmarked";
+      if (status === "unmarked") summary.unmarked += 1;
+      else { summary.marked += 1; summary[status] += 1; }
+    });
+    this.setData({ students, summary, dirty, ...extra });
+    if (dirty) this.enableDirtyWarning();
+  },
+  enableDirtyWarning() {
+    if (!wx.enableAlertBeforeUnload) return;
+    try { wx.enableAlertBeforeUnload({ message: "点名尚未保存，确定离开吗？" }); } catch (error) { /* 低版本忽略 */ }
+  },
+  clearDirty() {
+    if (wx.disableAlertBeforeUnload) {
+      try { wx.disableAlertBeforeUnload(); } catch (error) { /* 低版本忽略 */ }
+    }
+    this.setData({ dirty: false });
+  },
+  status(event) {
+    const { student, status } = event.currentTarget.dataset;
+    const students = this.data.students.map((item) => item.id === student ? { ...item, attendanceStatus: status } : item);
+    this.applyStudents(students, true);
+  },
+  allPresent() { if (this.data.students.length) this.applyStudents(this.data.students.map((item) => ({ ...item, attendanceStatus: "present" })), true); },
+  async submit() {
+    if (this.data.saving || !this.data.students.length) return;
+    if (this.data.summary.unmarked) { wx.showToast({ title: `还有${this.data.summary.unmarked}人未点名`, icon: "none" }); return; }
+    this.setData({ saving: true });
+    try {
+      await api.call("submitAttendance", { classId: this.data.classId, date: this.data.date, records: this.data.students.map((item) => ({ studentId: item.id, status: item.attendanceStatus })) });
+      this.clearDirty();
+      wx.showToast({ title: "点名已保存" });
+    } finally { this.setData({ saving: false }); }
+  }
+});

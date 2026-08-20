@@ -1,0 +1,29 @@
+<view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
+<view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+<block wx:elif="{{context}}">
+<view class="profile-head">
+  <view class="avatar">{{context.user.role === 'admin' ? '管' : (context.user.role === 'coach' ? '教' : '家')}}</view>
+  <view class="name">{{context.user.name}}</view>
+  <view class="role">{{roleLabel}} · {{modeLabel}}</view>
+</view>
+<view class="page page-enter">
+  <view class="card" wx:if="{{context.mode === 'local'}}">
+    <view class="card-title">演示角色</view>
+    <view class="muted small desc">用于在开发者工具中预览三个角色看到的内容；云端正式模式不能随意切换身份。</view>
+    <view class="roles"><view wx:for="{{roles}}" wx:key="value" data-role="{{item.value}}" bindtap="switchRole" class="role-btn {{context.user.role === item.value ? 'active' : ''}}">{{item.label}}</view></view>
+  </view>
+  <view class="card" wx:if="{{context.mode === 'cloud' && context.needsBinding}}">
+    <view class="card-title">绑定俱乐部身份</view>
+    <view class="muted small desc">向管理员获取家长或教练邀请码。</view>
+    <input class="input" maxlength="6" type="number" placeholder="请输入6位邀请码" value="{{inviteCode}}" bindinput="inviteInput" />
+    <button class="btn-primary bind" disabled="{{binding}}" loading="{{binding}}" bindtap="claimInvite">{{binding ? '正在绑定' : '立即绑定'}}</button>
+  </view>
+  <view class="card menu">
+    <view class="menu-item pressable" wx:if="{{context.user.role !== 'coach'}}" bindtap="renewals"><text>续费与课时记录</text><text class="muted">›</text></view>
+    <view class="menu-item"><text>数据模式</text><text class="muted">{{modeLabel}}</text></view>
+    <view class="menu-item"><text>版本</text><text class="muted">第一版 MVP</text></view>
+  </view>
+  <button wx:if="{{context.mode === 'local'}}" class="btn-secondary" bindtap="reset">重置演示数据</button>
+  <view class="tip">正式启用前，需要部署 clubApi 云函数、创建云环境并配置角色绑定。真实微信支付还需要商户号。</view>
+</view>
+</block>

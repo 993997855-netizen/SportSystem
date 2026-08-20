@@ -1,0 +1,26 @@
+<view class="page page-enter">
+  <view class="notice">第一版采用“提交续费申请 → 后台确认到账 → 自动增加课时”。接入微信支付商户号后，可把确认步骤替换为支付回调。</view>
+  <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
+  <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+  <block wx:else>
+  <view class="blocked card" wx:if="{{role === 'coach'}}">教练员不展示财务与续费信息。如需处理续费，请联系管理员。</view>
+  <button class="btn-primary" wx:if="{{role !== 'coach' && students.length}}" bindtap="openForm">发起续费</button>
+
+  <view class="section-title" wx:if="{{role !== 'coach'}}">续费记录</view>
+  <view class="card order" wx:for="{{renewals}}" wx:key="id">
+    <view class="between"><view><view class="name">{{item.studentName}}</view><view class="muted small mt">{{item.createdAt}}</view></view><view class="tag {{item.status === 'pending' ? 'warning' : ''}}">{{item.status === 'pending' ? '待确认' : '已到账'}}</view></view>
+    <view class="divider"></view>
+    <view class="between"><view><text class="lessons">{{item.lessons}}</text><text class="muted small"> 节课</text></view><view class="amount">¥{{item.amount}}</view></view>
+    <button wx:if="{{role === 'admin' && item.status === 'pending'}}" class="btn-secondary confirm" disabled="{{confirmingId}}" loading="{{confirmingId === item.id}}" data-id="{{item.id}}" bindtap="confirm">确认已收款并加课</button>
+  </view>
+  <view class="empty card" wx:if="{{role !== 'coach' && renewals.length === 0}}">暂无续费记录</view>
+  </block>
+</view>
+
+<view class="mask" wx:if="{{showForm}}" bindtap="closeForm"></view>
+<view class="sheet" wx:if="{{showForm}}">
+  <view class="between sheet-title"><text>选择续费套餐</text><text class="close" bindtap="closeForm">×</text></view>
+  <view class="field"><text class="field-label">学员</text><picker range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="student"><view class="picker">{{students[studentIndex].name || '请选择'}}</view></picker></view>
+  <view class="field"><text class="field-label">课时套餐</text><picker range="{{packages}}" range-key="label" value="{{packageIndex}}" bindchange="package"><view class="picker">{{packages[packageIndex].label}}</view></picker></view>
+  <button class="btn-primary" disabled="{{submitting}}" loading="{{submitting}}" bindtap="create">{{submitting ? '正在提交' : '提交续费申请'}}</button>
+</view>
