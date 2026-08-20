@@ -3,16 +3,15 @@
 <view class="page page-enter" wx:else>
   <view class="card">
     <view class="field"><text class="field-label">班级名称 *</text><input class="input" value="{{clubClass.name}}" data-key="name" bindinput="field" placeholder="例如：U10 提高班" /></view>
-    <view class="field"><text class="field-label">教练姓名 *</text><input class="input" value="{{clubClass.coachName}}" data-key="coachName" bindinput="field" placeholder="例如：张教练" /></view>
+    <view class="field"><text class="field-label">班级类型 *</text><picker range="{{classTypes}}" range-key="label" value="{{typeIndex}}" bindchange="type"><view class="picker">{{classTypes[typeIndex].label}}</view></picker><view class="field-help">普通班允许家长报名；精英队仅允许管理员选拔。</view></view>
+    <view class="field"><text class="field-label">年龄组 *</text><input class="input" value="{{clubClass.ageGroup}}" data-key="ageGroup" bindinput="field" placeholder="例如：2017/2018（U9）" /></view>
+    <view class="field"><text class="field-label">标准容量 *</text><input class="input" type="number" value="{{clubClass.standardCapacity}}" data-key="standardCapacity" bindinput="field" /><view class="field-help">这是建议容量。管理员确认后可超额，家长端满员后不可报名。</view></view>
+    <view class="field"><text class="field-label">主教练 *</text><input class="input" value="{{clubClass.headCoachName}}" data-key="headCoachName" bindinput="field" placeholder="例如：游导" /></view>
+    <view class="field"><text class="field-label">助理教练</text><input class="input" value="{{clubClass.assistantCoachName}}" data-key="assistantCoachName" bindinput="field" placeholder="可不填" /></view>
     <view class="field"><text class="field-label">训练时间 *</text><input class="input" value="{{clubClass.schedule}}" data-key="schedule" bindinput="field" placeholder="例如：周三18:30 / 周六09:00" /></view>
     <view class="field"><text class="field-label">训练场地 *</text><input class="input" value="{{clubClass.venue}}" data-key="venue" bindinput="field" placeholder="例如：一号足球场" /></view>
-  </view>
-  <view class="card">
-    <view class="field-label">选择班级学员</view>
-    <checkbox-group bindchange="students">
-      <label class="check" wx:for="{{students}}" wx:key="id"><checkbox value="{{item.id}}" checked="{{item.checked}}" color="#12643B"/><view><view>{{item.name}}</view><view class="muted small">剩余 {{item.remainingLessons}} 节</view></view></label>
-    </checkbox-group>
-    <view class="empty" wx:if="{{students.length === 0}}">请先创建学员</view>
+    <view class="field"><text class="field-label">状态</text><picker range="{{statuses}}" range-key="label" value="{{statusIndex}}" bindchange="status"><view class="picker">{{statuses[statusIndex].label}}</view></picker></view>
+    <view class="field"><text class="field-label">备注</text><textarea class="textarea" value="{{clubClass.remark}}" data-key="remark" bindinput="field" placeholder="比赛目标、训练要求等" /></view>
   </view>
   <view class="sticky-action"><button class="btn-primary" disabled="{{saving}}" loading="{{saving}}" bindtap="save">{{saving ? '正在保存' : '保存班级'}}</button></view>
 </view>

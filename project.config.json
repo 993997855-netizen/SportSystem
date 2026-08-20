@@ -63,10 +63,6 @@
       },
       {
         "type": "folder",
-        "value": "miniprogram/components"
-      },
-      {
-        "type": "folder",
         "value": "miniprogram/images/icons"
       },
       {

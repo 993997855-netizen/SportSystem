@@ -3,7 +3,6 @@ const api = require("../../utils/api");
 Page({
   data: {
     id: "",
-    classes: [],
     genders: ["男", "女"],
     genderIndex: 0,
     student: { name: "", gender: "男", birthDate: "2016-01-01", guardianName: "", guardianPhone: "", emergencyContact: "", healthNotes: "", remainingLessons: 0, totalLessons: 0, classIds: [] },
@@ -15,18 +14,15 @@ Page({
     this.options = options;
     wx.setNavigationBarTitle({ title: options.id ? "编辑学员" : "新增学员" });
     try {
-      const classes = await api.call("listClasses");
       let student = this.data.student;
       if (options.id) student = await api.call("getStudent", { id: options.id });
-      const selected = student.classIds || (student.classes || []).map((item) => item.id);
-      this.setData({ id: options.id || "", student: { ...student, classIds: selected }, classes: classes.map((item) => ({ ...item, checked: selected.includes(item.id) })), genderIndex: student.gender === "女" ? 1 : 0, loading: false });
+      this.setData({ id: options.id || "", student, genderIndex: student.gender === "女" ? 1 : 0, loading: false });
     } catch (error) { this.setData({ loading: false, error: "表单加载失败" }); }
   },
   retry() { this.setData({ loading: true, error: "" }); this.onLoad(this.options || {}); },
   field(event) { this.setData({ [`student.${event.currentTarget.dataset.key}`]: event.detail.value }); },
   gender(event) { const index = Number(event.detail.value); this.setData({ genderIndex: index, "student.gender": this.data.genders[index] }); },
   birthDate(event) { this.setData({ "student.birthDate": event.detail.value }); },
-  classes(event) { this.setData({ "student.classIds": event.detail.value }); },
   async save() {
     if (this.data.saving) return;
     const student = { ...this.data.student, name: this.data.student.name.trim(), guardianName: this.data.student.guardianName.trim(), guardianPhone: String(this.data.student.guardianPhone || "").trim() };

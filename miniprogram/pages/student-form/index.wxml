@@ -12,11 +12,6 @@
     <view class="field" wx:else><text class="field-label">初始课时</text><input class="input" value="{{student.remainingLessons}}" data-key="remainingLessons" bindinput="field" type="number" /><view class="field-help">建档后的课时变化只能通过点名和续费产生，避免账目被直接修改。</view></view>
     <view class="field"><text class="field-label">健康与伤病备注</text><textarea class="textarea" value="{{student.healthNotes}}" data-key="healthNotes" bindinput="field" placeholder="如过敏、旧伤、训练注意事项" /></view>
   </view>
-  <view class="card">
-    <view class="field-label">分配班级</view>
-    <checkbox-group bindchange="classes">
-      <label class="check" wx:for="{{classes}}" wx:key="id"><checkbox value="{{item.id}}" checked="{{item.checked}}" color="#173B77"/><text>{{item.name}} · {{item.coachName}}</text></label>
-    </checkbox-group>
-  </view>
+  <view class="hint card">学员档案与编班已拆分。保存档案后，请在“班级详情”中执行加入、转班或精英队选拔。</view>
   <view class="sticky-action"><button class="btn-primary" disabled="{{saving}}" loading="{{saving}}" bindtap="save">{{saving ? '正在保存' : '保存学员'}}</button></view>
 </view>

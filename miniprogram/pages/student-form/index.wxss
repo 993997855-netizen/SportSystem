@@ -1,2 +1,2 @@
-.check { display: flex; align-items: center; gap: 16rpx; padding: 22rpx 0; border-bottom: 1rpx solid #edf0ee; }.check:last-child { border-bottom: 0; }
+.hint { color: #587064; line-height: 1.65; }
 .lesson-readonly { display: grid; grid-template-columns: 1fr 1fr; gap: 18rpx; margin-bottom: 26rpx; }.lesson-readonly view { background: #f4f7f5; border-radius: 16rpx; padding: 22rpx; }.lesson-readonly text { display: block; }.lesson-number { color: #12643b; font-size: 38rpx; font-weight: 800; margin-top: 8rpx; }.field-help { color: #8a918d; font-size: 22rpx; line-height: 1.5; margin-top: 10rpx; }

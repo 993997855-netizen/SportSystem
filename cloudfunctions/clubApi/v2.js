@@ -1,18 +1,20 @@
 const cloud = require("wx-server-sdk");
 const { createCrmApi } = require("./crm");
+const { createClassService } = require("./class-service");
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const command = db.command;
 
 // 上线前替换为公司管理员的真实 OPENID，避免“第一个访问者自动成为管理员”。
 const BOOTSTRAP_ADMIN_OPENIDS = ["REPLACE_WITH_NANLIAN_ADMIN_OPENID"];
-const COLLECTIONS = ["users", "students", "classes", "sessions", "enrollments", "waitlist", "leaveRequests", "attendance", "lessonLedger", "feedback", "renewals", "invites", "auditLogs", "leads", "leadFollowUps", "trialBookings"];
+const COLLECTIONS = ["users", "students", "classes", "classMembers", "eliteSelections", "sessions", "enrollments", "waitlist", "leaveRequests", "attendance", "lessonLedger", "feedback", "renewals", "invites", "auditLogs", "leads", "leadFollowUps", "trialBookings"];
 const DEDUCTION = { present: 1, absent: 1, leave: 0, sick: 0 };
 const PACKAGES = {
   p14: { name: "一周一练", lessons: 14, amount: 1380 },
   p28: { name: "一周两练", lessons: 28, amount: 1980 }
 };
 const crmApi = createCrmApi({ db, command, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, saveStudent, packages: PACKAGES });
+const classService = createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit });
 let collectionsReady;
 
 function nowText() { return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().replace("T", " ").slice(0, 16); }
@@ -41,11 +43,15 @@ async function ensureUser(openid) {
   const user = { openid, role, name: role === "admin" ? "南联管理员" : "待绑定家长", studentIds: [], classIds: [], createdAt: nowText() };
   const added = await db.collection("users").add({ data: user }); return { ...user, _id: added._id };
 }
-async function audit(user, action, targetType, targetId, detail) { await db.collection("auditLogs").add({ data: { userId: user._id, role: user.role, action, targetType, targetId, detail: String(detail || ""), createdAt: nowText() } }); }
+async function audit(user, action, targetType, targetId, detail) {
+  const fields = detail && typeof detail === "object" ? detail : { detail: String(detail || "") };
+  await db.collection("auditLogs").add({ data: { userId: user._id, role: user.role, action, targetType, targetId, ...fields, createdAt: nowText() } });
+}
 async function allowedStudentIds(user) {
   if (user.role === "admin") return null;
   if (user.role === "parent") return user.studentIds || [];
-  const classes = await fetchByIds("classes", user.classIds || []); return [...new Set(classes.flatMap((item) => item.studentIds || []))];
+  const memberships = await fetchAll("classMembers", { status: "ACTIVE" });
+  return [...new Set(memberships.filter((item) => (user.classIds || []).includes(item.classId)).map((item) => item.studentId))];
 }
 async function assertStudentAccess(user, studentId) { const allowed = await allowedStudentIds(user); if (allowed && !allowed.includes(studentId)) throw new Error("无权访问该学员"); }
 
@@ -57,54 +63,60 @@ async function listStudents(user) {
 }
 async function listClasses(user) {
   let classes;
-  if (user.role === "admin") classes = await fetchAll("classes", { active: true });
-  else if (user.role === "coach") classes = (await fetchByIds("classes", user.classIds || [])).filter((item) => item.active);
-  else { const students = await listStudents(user); classes = await fetchByIds("classes", [...new Set(students.flatMap((item) => item.classIds || []))]); }
-  return classes.map((item) => ({ ...publicDoc(item), studentCount: (item.studentIds || []).length }));
+  if (user.role === "admin") classes = await fetchAll("classes", { status: "ACTIVE" });
+  else if (user.role === "coach") classes = (await fetchByIds("classes", user.classIds || [])).filter((item) => item.status !== "INACTIVE");
+  else classes = await fetchAll("classes", { status: "ACTIVE" });
+  const rows = []; for (const item of classes) rows.push(await classService.decorateClass(item)); return rows;
 }
 async function getStudent(user, id) {
   await assertStudentAccess(user, id); const student = (await db.collection("students").doc(id).get()).data;
-  const [classes, attendance, renewals, feedback, ledger] = await Promise.all([
-    fetchByIds("classes", student.classIds || []),
+  const memberships = await classService.studentMemberships(id);
+  const [classes, attendance, renewals, feedback, ledger, selections] = await Promise.all([
+    fetchByIds("classes", memberships.map((item) => item.classId)),
     db.collection("attendance").where({ studentId: id }).orderBy("date", "desc").limit(50).get(),
     user.role === "coach" ? Promise.resolve({ data: [] }) : db.collection("renewals").where({ studentId: id }).orderBy("createdAt", "desc").limit(50).get(),
     db.collection("feedback").where({ studentId: id }).orderBy("createdAt", "desc").limit(50).get(),
-    db.collection("lessonLedger").where({ studentId: id }).orderBy("createdAt", "desc").limit(100).get()
+    db.collection("lessonLedger").where({ studentId: id }).orderBy("createdAt", "desc").limit(100).get(),
+    db.collection("eliteSelections").where({ studentId: id }).orderBy("createdAt", "desc").limit(100).get()
   ]);
   let recruitment = null; const leadResult = student.crmLeadId ? await db.collection("leads").doc(student.crmLeadId).get().catch(() => ({ data: null })) : await db.collection("leads").where({ convertedStudentId: id }).limit(1).get(); const lead = student.crmLeadId ? leadResult.data : (leadResult.data || [])[0]; if (lead) { const trial = (await db.collection("trialBookings").where({ leadId: lead._id }).orderBy("trialDate", "desc").limit(1).get()).data[0]; recruitment = { source: lead.source, ownerCoachName: lead.ownerCoachName, firstContactAt: lead.createdAt, trialDate: (trial || {}).trialDate || "", trialCoachName: (trial || {}).coachName || "", trialFeedback: ((trial || {}).feedback || {}).summary || "", convertedAt: lead.convertedAt }; }
-  return { ...publicDoc(student), initial: student.name ? student.name[0] : "学", classes: classes.map(publicDoc), attendance: attendance.data.map(publicDoc), renewals: renewals.data.map(publicDoc), feedback: feedback.data.map(publicDoc), lessonLedger: ledger.data.map(publicDoc), recruitment };
+  const decoratedClasses = []; for (const item of classes) decoratedClasses.push(await classService.decorateClass(item));
+  const latestSelection = selections.data[0]; const recommendationStatus = !latestSelection ? "NONE" : latestSelection.status === "APPROVED" ? "SELECTED" : latestSelection.status === "PENDING" ? "RECOMMENDED" : "WATCH";
+  return { ...publicDoc(student), classIds: memberships.map((item) => item.classId), initial: student.name ? student.name[0] : "学", classes: decoratedClasses, memberships: memberships.map(publicDoc), eliteSelections: selections.data.map(publicDoc), selectionStatus: latestSelection ? latestSelection.status : "", eliteRecommendationStatus: recommendationStatus, attendance: attendance.data.map(publicDoc), renewals: renewals.data.map(publicDoc), feedback: feedback.data.map(publicDoc), lessonLedger: ledger.data.map(publicDoc), recruitment };
 }
 async function saveStudent(user, payload) {
-  requireRole(user, ["admin"]); const classIds = payload.classIds || [];
-  const data = { name: String(payload.name || "").trim(), gender: payload.gender || "男", birthDate: payload.birthDate || "", guardianName: String(payload.guardianName || "").trim(), guardianPhone: String(payload.guardianPhone || ""), emergencyContact: String(payload.emergencyContact || ""), healthNotes: String(payload.healthNotes || ""), school: String(payload.school || ""), grade: String(payload.grade || ""), crmLeadId: String(payload.crmLeadId || ""), source: String(payload.source || ""), registrationDate: String(payload.registrationDate || ""), recruitmentOwnerId: String(payload.recruitmentOwnerId || ""), recruitmentOwnerName: String(payload.recruitmentOwnerName || ""), classIds, status: "active", updatedAt: nowText() };
+  requireRole(user, ["admin"]); const requestedClassIds = payload.classIds || [];
+  const existing = payload.id ? (await db.collection("students").doc(payload.id).get()).data : null;
+  const data = { name: String(payload.name || "").trim(), gender: payload.gender || "男", birthDate: payload.birthDate || "", guardianName: String(payload.guardianName || "").trim(), guardianPhone: String(payload.guardianPhone || ""), emergencyContact: String(payload.emergencyContact || ""), healthNotes: String(payload.healthNotes || ""), school: String(payload.school || ""), grade: String(payload.grade || ""), crmLeadId: String(payload.crmLeadId || ""), source: String(payload.source || ""), registrationDate: String(payload.registrationDate || ""), recruitmentOwnerId: String(payload.recruitmentOwnerId || ""), recruitmentOwnerName: String(payload.recruitmentOwnerName || ""), classIds: existing ? existing.classIds || [] : [], status: "active", updatedAt: nowText() };
   if (!data.name || !data.guardianName || !/^1\d{10}$/.test(data.guardianPhone)) throw new Error("请完整填写学员和家长信息");
   let id = payload.id;
   if (id) await db.collection("students").doc(id).update({ data });
   else { const lessons = Math.max(0, Number(payload.remainingLessons || 0)); const added = await db.collection("students").add({ data: { ...data, remainingLessons: lessons, totalLessons: lessons, createdAt: nowText() } }); id = added._id; if (lessons) await db.collection("lessonLedger").add({ data: { studentId: id, type: "opening", delta: lessons, balanceAfter: lessons, referenceType: "student", referenceId: id, note: "建档期初课时", createdAt: nowText() } }); }
-  const classes = await fetchAll("classes", { active: true });
-  await Promise.all(classes.map((item) => { const current = item.studentIds || []; const selected = classIds.includes(item._id); const next = selected ? [...new Set([...current, id])] : current.filter((value) => value !== id); if (JSON.stringify(next) === JSON.stringify(current)) return Promise.resolve(); return db.collection("classes").doc(item._id).update({ data: { studentIds: next, updatedAt: nowText() } }); }));
+  if (!existing) for (const classId of requestedClassIds) await classService.call("addClassMember", { classId, studentId: id, source: "ADMIN_ADD", confirmCapacity: true }, user);
   await audit(user, "saveStudent", "student", id, data.name); return { id };
 }
-async function getClass(user, id) { requireRole(user, ["admin"]); return publicDoc((await db.collection("classes").doc(id).get()).data); }
+async function getClass(user, id) { requireRole(user, ["admin"]); return classService.decorateClass((await db.collection("classes").doc(id).get()).data); }
 async function saveClass(user, payload) {
-  requireRole(user, ["admin"]); const data = { name: String(payload.name || "").trim(), group: String(payload.group || ""), coachName: String(payload.coachName || "").trim(), schedule: String(payload.schedule || ""), venue: String(payload.venue || ""), studentIds: payload.studentIds || [], active: true, updatedAt: nowText() };
-  if (!data.name || !data.coachName || !data.schedule || !data.venue) throw new Error("班级信息不完整"); let id = payload.id;
+  requireRole(user, ["admin"]); const previous = payload.id ? (await db.collection("classes").doc(payload.id).get()).data : null;
+  const data = { name: String(payload.name || "").trim(), classType: payload.classType === "ELITE" ? "ELITE" : "REGULAR", ageGroup: String(payload.ageGroup || payload.group || ""), group: String(payload.ageGroup || payload.group || ""), standardCapacity: Math.max(1, Number(payload.standardCapacity || 20)), headCoachName: String(payload.headCoachName || payload.coachName || "").trim(), coachName: String(payload.headCoachName || payload.coachName || "").trim(), assistantCoachName: String(payload.assistantCoachName || "").trim(), schedule: String(payload.schedule || ""), venue: String(payload.venue || ""), status: payload.status === "INACTIVE" ? "INACTIVE" : "ACTIVE", active: payload.status !== "INACTIVE", remark: String(payload.remark || ""), studentIds: previous ? previous.studentIds || [] : [], updatedAt: nowText() };
+  if (!data.name || !data.ageGroup || !data.headCoachName || !data.schedule || !data.venue) throw new Error("班级信息不完整"); let id = payload.id;
   if (id) await db.collection("classes").doc(id).update({ data }); else { const added = await db.collection("classes").add({ data: { ...data, createdAt: nowText() } }); id = added._id; }
-  const students = await fetchAll("students", { status: "active" }); await Promise.all(students.map((student) => { const current = student.classIds || []; const selected = data.studentIds.includes(student._id); const next = selected ? [...new Set([...current, id])] : current.filter((value) => value !== id); if (JSON.stringify(next) === JSON.stringify(current)) return Promise.resolve(); return db.collection("students").doc(student._id).update({ data: { classIds: next, updatedAt: nowText() } }); }));
-  await audit(user, "saveClass", "class", id, data.name); return { id };
+  await audit(user, previous ? "updateClass" : "createClass", "class", id, { operator: user._id, classId: id, fromType: previous ? previous.classType || "REGULAR" : "", toType: data.classType, reason: previous && previous.classType !== data.classType ? "班级类型调整" : data.name }); return { id };
 }
 
 async function sessionAccess(user, session) { if (user.role === "coach" && !(user.classIds || []).includes(session.classId)) throw new Error("无权管理该课程"); }
 async function decorateSession(session, studentId) {
-  const [count, trialCount, enrollment, waiting, leave] = await Promise.all([
+  const [count, trialCount, enrollment, waiting, leave, classResult] = await Promise.all([
     db.collection("enrollments").where({ sessionId: session._id, status: "booked" }).count(),
     db.collection("trialBookings").where({ sessionId: session._id, status: "SCHEDULED" }).count(),
     studentId ? db.collection("enrollments").where({ sessionId: session._id, studentId, status: "booked" }).limit(1).get() : Promise.resolve({ data: [] }),
     db.collection("waitlist").where({ sessionId: session._id, status: "waiting" }).orderBy("createdAt", "asc").limit(100).get(),
-    studentId ? db.collection("leaveRequests").where({ sessionId: session._id, studentId, status: "pending" }).limit(1).get() : Promise.resolve({ data: [] })
+    studentId ? db.collection("leaveRequests").where({ sessionId: session._id, studentId, status: "pending" }).limit(1).get() : Promise.resolve({ data: [] }),
+    db.collection("classes").doc(session.classId).get().catch(() => ({ data: null }))
   ]);
   const position = studentId ? waiting.data.findIndex((item) => item.studentId === studentId) + 1 : 0;
-  return { ...publicDoc(session), enrolledCount: count.total, trialCount: trialCount.total, totalCount: count.total + trialCount.total, remaining: Math.max(0, Number(session.capacity || 0) - count.total - trialCount.total), myStatus: leave.data.length ? "leave_pending" : enrollment.data.length ? "booked" : position ? "waiting" : "none", waitlistPosition: position };
+  const clubClass = classResult.data || {}; const totalCount = count.total + trialCount.total;
+  return { ...publicDoc(session), classType: clubClass.classType || "REGULAR", classTypeLabel: clubClass.classType === "ELITE" ? "精英队" : "普通班", enrolledCount: count.total, trialCount: trialCount.total, totalCount, remaining: Math.max(0, Number(session.capacity || 0) - totalCount), isFull: totalCount >= Number(session.capacity || 0), myStatus: leave.data.length ? "leave_pending" : enrollment.data.length ? "booked" : position ? "waiting_history" : "none", waitlistPosition: position };
 }
 async function listSessions(user, input) {
   let sessions = await fetchAll("sessions"); if (user.role === "parent") sessions = sessions.filter((item) => item.status === "published"); if (user.role === "coach") sessions = sessions.filter((item) => (user.classIds || []).includes(item.classId));
@@ -126,12 +138,13 @@ async function saveSession(user, payload) {
 async function enrollSession(user, input) {
   requireRole(user, ["admin", "parent"]); const studentId = validId(input.studentId || (user.studentIds || [])[0]); await assertStudentAccess(user, studentId);
   const result = await db.runTransaction(async (transaction) => {
-    const session = (await transaction.collection("sessions").doc(validId(input.sessionId)).get()).data; if (session.status !== "published") throw new Error("课程暂不可报名"); if (session.enrollmentMode === "fixed" && user.role !== "admin") throw new Error("固定梯队课程由管理员统一排入"); const student = (await transaction.collection("students").doc(studentId).get()).data; if (Number(student.remainingLessons || 0) <= 0) throw new Error("剩余课时不足，请先续费");
+    const session = (await transaction.collection("sessions").doc(validId(input.sessionId)).get()).data; if (session.status !== "published") throw new Error("课程暂不可报名"); const clubClass = (await transaction.collection("classes").doc(session.classId).get()).data; if (user.role === "parent" && clubClass.classType === "ELITE") throw new Error("精英队实行俱乐部选拔制"); if (session.enrollmentMode === "fixed" && user.role !== "admin") throw new Error("固定梯队课程由管理员统一排入"); const student = (await transaction.collection("students").doc(studentId).get()).data; if (Number(student.remainingLessons || 0) <= 0) throw new Error("剩余课时不足，请先续费");
+    if (user.role === "parent") { const membership = await transaction.collection("classMembers").where({ classId: session.classId, studentId, status: "ACTIVE" }).limit(1).get(); if (!membership.data.length) throw new Error("请先完成该普通班报名"); }
     const duplicate = await transaction.collection("enrollments").where({ sessionId: input.sessionId, studentId, status: "booked" }).limit(1).get(); if (duplicate.data.length) return { status: "booked", message: "已报名" };
     const [enrolled, trials] = await Promise.all([transaction.collection("enrollments").where({ sessionId: input.sessionId, status: "booked" }).count(), transaction.collection("trialBookings").where({ sessionId: input.sessionId, status: "SCHEDULED" }).count()]);
-    if (enrolled.total + trials.total >= Number(session.capacity || 0)) { const waiting = await transaction.collection("waitlist").where({ sessionId: input.sessionId, studentId, status: "waiting" }).limit(1).get(); if (!waiting.data.length) await transaction.collection("waitlist").add({ data: { sessionId: input.sessionId, studentId, status: "waiting", createdAt: nowText() } }); return { status: "waiting", message: "名额已满，已加入候补" }; }
+    if (enrolled.total + trials.total >= Number(session.capacity || 0) && user.role === "parent") return { status: "full", message: "本节课程已满" };
     await transaction.collection("enrollments").add({ data: { sessionId: input.sessionId, studentId, status: "booked", createdAt: nowText(), creatorId: user._id } }); return { status: "booked", message: "报名成功" };
-  }); await audit(user, result.status === "waiting" ? "joinWaitlist" : "enroll", "session", input.sessionId, studentId); return result;
+  }); if (result.status !== "full") await audit(user, "enroll", "session", input.sessionId, studentId); return result;
 }
 async function requestLeave(user, input) {
   requireRole(user, ["admin", "parent"]); const studentId = validId(input.studentId || (user.studentIds || [])[0]); await assertStudentAccess(user, studentId);
@@ -149,7 +162,7 @@ async function promoteWaitlist(sessionId) {
 async function reviewLeave(user, input) {
   requireRole(user, ["admin", "coach"]); const request = (await db.collection("leaveRequests").doc(validId(input.id)).get()).data; if (request.status !== "pending") throw new Error("申请状态已变化"); const session = (await db.collection("sessions").doc(request.sessionId).get()).data; await sessionAccess(user, session); const status = input.approved ? "approved" : "rejected";
   await db.runTransaction(async (transaction) => { const current = (await transaction.collection("leaveRequests").doc(input.id).get()).data; if (current.status !== "pending") throw new Error("申请状态已变化"); await transaction.collection("leaveRequests").doc(input.id).update({ data: { status, reviewedAt: nowText(), reviewerId: user._id, reviewNote: String(input.note || "") } }); if (input.approved) { const enrollment = await transaction.collection("enrollments").where({ sessionId: request.sessionId, studentId: request.studentId, status: "booked" }).limit(1).get(); if (enrollment.data.length) await transaction.collection("enrollments").doc(enrollment.data[0]._id).update({ data: { status: "leave", updatedAt: nowText() } }); } });
-  const promotedStudentId = input.approved ? await promoteWaitlist(request.sessionId) : null; await audit(user, "reviewLeave", "leave", input.id, status); return { ok: true, promotedStudentId };
+  await audit(user, "reviewLeave", "leave", input.id, status); return { ok: true, promotedStudentId: null };
 }
 
 async function getAttendanceSheet(user, input) {
@@ -199,8 +212,9 @@ async function getOperationsDashboard(user) {
 
 exports.main = async (event) => {
   try {
-    await ensureCollections(); const user = await ensureUser(cloud.getWXContext().OPENID); const input = event.data || {}; let data;
-    if (crmApi.handles(event.action)) data = await crmApi.call(event.action, user, input);
+    await ensureCollections(); await classService.ensureMigration(); const user = await ensureUser(cloud.getWXContext().OPENID); const input = event.data || {}; let data;
+    if (classService.handles(event.action)) data = await classService.call(event.action, input, user);
+    else if (crmApi.handles(event.action)) data = await crmApi.call(event.action, user, input);
     else switch (event.action) {
       case "getContext": data = { mode: "cloud", user: { id: user._id, role: user.role, name: user.name }, needsBinding: user.role !== "admin" && !(user.studentIds || []).length && !(user.classIds || []).length }; break;
       case "getDashboard": data = await getDashboard(user); break;

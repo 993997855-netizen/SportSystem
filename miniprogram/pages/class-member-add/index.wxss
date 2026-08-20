@@ -1,0 +1,1 @@
+.search{display:flex;gap:14rpx;background:#fff;padding:18rpx;border-radius:18rpx}.search input{flex:1}.hint{color:#587064;background:#e9f5ee;padding:18rpx;border-radius:14rpx;margin:18rpx 0;font-size:23rpx;line-height:1.6}.student{display:flex;align-items:center;gap:18rpx}.name{font-size:30rpx;font-weight:750}.mt{margin-top:8rpx}.mini{color:#173b77}

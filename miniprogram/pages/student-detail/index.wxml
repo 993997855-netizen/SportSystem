@@ -21,6 +21,9 @@
     <view class="between"><view><view class="card-title">{{item.name}}</view><view class="muted small mt">{{item.schedule}} · {{item.venue}}</view></view><view class="tag">{{item.coachName}}</view></view>
   </view>
   <view class="empty card" wx:if="{{student.classes.length === 0}}">暂未分班</view>
+  <button wx:if="{{role === 'admin' || role === 'coach'}}" class="btn-secondary elite-action" bindtap="elite">{{role === 'admin' ? '晋升精英队' : '推荐进入精英队'}}</button>
+
+  <view class="section-title" wx:if="{{student.eliteSelections.length}}">精英队选拔记录</view><view class="card"><view class="record" wx:for="{{student.eliteSelections}}" wx:key="id"><view><view>{{item.recommendationReason}}</view><view class="muted small">{{item.createdAt}} · {{item.recommenderName}}</view></view><view class="tag {{item.status === 'REJECTED' ? 'danger' : item.status === 'PENDING' ? 'gold' : ''}}">{{item.statusLabel}}</view></view></view>
 
   <view class="section-title" wx:if="{{student.recruitment}}">招生信息</view><view class="card" wx:if="{{student.recruitment}}"><view class="info"><text class="muted">客户来源</text><text>{{student.recruitment.source}}</text></view><view class="info"><text class="muted">原负责人</text><text>{{student.recruitment.ownerCoachName}}</text></view><view class="info"><text class="muted">首次咨询</text><text>{{student.recruitment.firstContactAt}}</text></view><view class="info"><text class="muted">体验日期</text><text>{{student.recruitment.trialDate || '未记录'}}</text></view><view class="info"><text class="muted">体验教练</text><text>{{student.recruitment.trialCoachName || '未记录'}}</text></view><view class="info"><text class="muted">成交日期</text><text>{{student.recruitment.convertedAt}}</text></view><view class="muted small feedback-content" wx:if="{{student.recruitment.trialFeedback}}">体验评价：{{student.recruitment.trialFeedback}}</view></view>
 

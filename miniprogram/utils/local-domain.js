@@ -1,5 +1,6 @@
 const { today } = require("./format");
 const crm = require("./crm-domain");
+const classesV3 = require("./class-domain");
 
 const STORAGE_KEY = "nanlianClubV2";
 const PACKAGES = {
@@ -9,17 +10,25 @@ const PACKAGES = {
 const DEDUCTION = { present: 1, absent: 1, leave: 0, sick: 0 };
 
 function seed() {
+  const demoStudents = Array.from({ length: 18 }, (_, index) => {
+    const number = index + 5;
+    return { id: `s${number}`, name: `U7演示学员${String(index + 1).padStart(2, "0")}`, gender: index % 3 === 0 ? "女" : "男", birthDate: `2017-${String(index % 12 + 1).padStart(2, "0")}-15`, guardianName: `家长${index + 1}`, guardianPhone: `1350000${String(index + 1).padStart(4, "0")}`, emergencyContact: `家长${index + 1} 1350000${String(index + 1).padStart(4, "0")}`, healthNotes: "无", remainingLessons: 14, totalLessons: 14, classIds: ["cu7base"], status: "active" };
+  });
+  const fullU7MemberIds = ["s1", "s2", ...demoStudents.map((item) => item.id)];
   return {
     students: [
-      { id: "s1", name: "陈小南", gender: "男", birthDate: "2017-03-18", guardianName: "陈女士", guardianPhone: "13800001203", emergencyContact: "陈先生 13900001203", healthNotes: "无", remainingLessons: 19, totalLessons: 28, classIds: ["c1718"], status: "active" },
-      { id: "s2", name: "周子航", gender: "男", birthDate: "2018-11-02", guardianName: "周先生", guardianPhone: "13600009081", emergencyContact: "周女士 13700009081", healthNotes: "左膝旧伤，训练前加强热身", remainingLessons: 4, totalLessons: 28, classIds: ["c1718"], status: "active" },
-      { id: "s3", name: "林一诺", gender: "女", birthDate: "2016-07-09", guardianName: "林女士", guardianPhone: "13900006618", emergencyContact: "林先生 13800006618", healthNotes: "无", remainingLessons: 11, totalLessons: 14, classIds: ["c1516"], status: "active" },
+      { id: "s1", name: "陈小南", gender: "男", birthDate: "2017-03-18", guardianName: "陈女士", guardianPhone: "13800001203", emergencyContact: "陈先生 13900001203", healthNotes: "无", remainingLessons: 19, totalLessons: 28, classIds: ["cu7base", "c1718"], status: "active" },
+      { id: "s2", name: "周子航", gender: "男", birthDate: "2017-11-02", guardianName: "周先生", guardianPhone: "13600009081", emergencyContact: "周女士 13700009081", healthNotes: "左膝旧伤，训练前加强热身", remainingLessons: 4, totalLessons: 28, classIds: ["cu7base", "c1718"], status: "active" },
+      { id: "s3", name: "林一诺", gender: "女", birthDate: "2016-07-09", guardianName: "林女士", guardianPhone: "13900006618", emergencyContact: "林先生 13800006618", healthNotes: "无", remainingLessons: 11, totalLessons: 14, classIds: ["cu8advanced", "c1516"], status: "active" },
       { id: "s4", name: "王奕辰", gender: "男", birthDate: "2019-09-23", guardianName: "王先生", guardianPhone: "13700004329", emergencyContact: "王女士 13600004329", healthNotes: "近期脚踝轻微不适", remainingLessons: 2, totalLessons: 14, classIds: ["cinterest"], status: "active" }
+      , ...demoStudents
     ],
     classes: [
-      { id: "c1718", name: "17/18精英班", group: "丙组梯队", coachName: "游导", coachUserId: "coach1", schedule: "周二/四/六 15:00-17:00", venue: "三江南联球场", studentIds: ["s1", "s2"], active: true },
-      { id: "c1516", name: "15/16精英班", group: "乙组梯队", coachName: "游导", coachUserId: "coach1", schedule: "周一/三/五 19:00-20:30", venue: "瓯北中心小学", studentIds: ["s3"], active: true },
-      { id: "cinterest", name: "兴趣成长班", group: "基础班", coachName: "王蒋生", coachUserId: "coach2", schedule: "周五 19:00-20:30", venue: "瓯北中心小学", studentIds: ["s4"], active: true }
+      { id: "cinterest", name: "U6启蒙班", classType: "REGULAR", ageGroup: "U6 / 2019-2020", standardCapacity: 16, group: "启蒙班", headCoachName: "王蒋生", coachName: "王蒋生", assistantCoachName: "", coachUserId: "coach2", schedule: "周五 19:00-20:30", venue: "瓯北中心小学", status: "ACTIVE", remark: "兴趣启蒙与球感培养", studentIds: ["s4"], active: true },
+      { id: "cu7base", name: "U7基础班", classType: "REGULAR", ageGroup: "U7 / 2017", standardCapacity: 20, group: "基础班", headCoachName: "王蒋生", coachName: "王蒋生", assistantCoachName: "张教练", coachUserId: "coach2", schedule: "周三 19:00-20:30", venue: "瓯北中心小学", status: "ACTIVE", remark: "演示满员普通班", studentIds: fullU7MemberIds, active: true },
+      { id: "cu8advanced", name: "U8提高班", classType: "REGULAR", ageGroup: "U8 / 2016", standardCapacity: 20, group: "提高班", headCoachName: "游导", coachName: "游导", assistantCoachName: "王蒋生", coachUserId: "coach1", schedule: "周一/三 19:00-20:30", venue: "瓯北中心小学", status: "ACTIVE", remark: "技术提高与比赛衔接", studentIds: ["s3"], active: true },
+      { id: "c1718", name: "U7精英队", classType: "ELITE", ageGroup: "U7 / 2017", standardCapacity: 18, group: "丙组梯队", headCoachName: "游导", coachName: "游导", assistantCoachName: "王蒋生", coachUserId: "coach1", schedule: "周二/四/六 15:00-17:00", venue: "三江南联球场", status: "ACTIVE", remark: "俱乐部选拔制", studentIds: ["s1", "s2"], active: true },
+      { id: "c1516", name: "U8精英队", classType: "ELITE", ageGroup: "U8 / 2016", standardCapacity: 18, group: "乙组梯队", headCoachName: "游导", coachName: "游导", assistantCoachName: "", coachUserId: "coach1", schedule: "周一/三/五 19:00-20:30", venue: "瓯北中心小学", status: "ACTIVE", remark: "俱乐部选拔制", studentIds: ["s3"], active: true }
     ],
     sessions: [
       { id: "se1", classId: "c1718", title: "17/18精英班", date: "2026-08-20", weekday: "周四", time: "15:00-17:00", venue: "三江南联球场", coachName: "游导", focus: "一对一突破与攻防转换", capacity: 20, status: "published", enrollmentMode: "open" },
@@ -46,6 +55,11 @@ function seed() {
     ],
     feedback: [{ id: "f1", sessionId: "history1", studentId: "s1", coachName: "游导", rating: 4, tags: ["突破积极", "第一脚进步"], content: "敢于向前突破，下一阶段重点观察突破后的抬头和传球时机。", createdAt: "2026-08-18 18:00" }],
     renewals: [{ id: "r1", studentId: "s4", packageId: "p28", lessons: 28, amount: 1980, status: "pending", createdAt: "2026-08-18 14:20" }],
+    eliteSelections: [
+      { id: "es-pending", studentId: "s4", fromClassId: "cinterest", targetEliteClassId: "c1718", recommendationSource: "COACH_RECOMMENDATION", recommendedBy: "coach2", recommenderName: "王蒋生", recommendationReason: "训练态度积极，球感进步明显，建议跟训观察。", status: "PENDING", createdAt: "2026-08-19 10:00", updatedAt: "2026-08-19 10:00" },
+      { id: "es-approved", studentId: "s1", fromClassId: "cu7base", targetEliteClassId: "c1718", recommendationSource: "COACH_RECOMMENDATION", recommendedBy: "coach1", recommenderName: "游导", recommendationReason: "1V1突破能力突出，比赛表现稳定。", status: "APPROVED", reviewedBy: "admin", reviewRemark: "同意入选并保留普通班", createdAt: "2026-08-10 10:00", reviewedAt: "2026-08-11 09:00", updatedAt: "2026-08-11 09:00" },
+      { id: "es-rejected", studentId: "s3", fromClassId: "cu8advanced", targetEliteClassId: "c1516", recommendationSource: "COACH_RECOMMENDATION", recommendedBy: "coach1", recommenderName: "游导", recommendationReason: "建议进入精英队观察。", status: "REJECTED", reviewedBy: "admin", reviewRemark: "先继续提高班训练一个阶段", createdAt: "2026-08-08 10:00", reviewedAt: "2026-08-09 09:00", updatedAt: "2026-08-09 09:00" }
+    ],
     auditLogs: []
   };
 }
@@ -54,31 +68,34 @@ function load() {
   let data = wx.getStorageSync(STORAGE_KEY);
   if (!data || !data.sessions || !data.lessonLedger) { data = seed(); save(data); }
   if (!data.leads) { crm.ensure(data, today()); save(data); }
+  classesV3.ensure(data, { uid, stamp });
+  save(data);
   return data;
 }
 function save(data) { wx.setStorageSync(STORAGE_KEY, data); }
 function uid(prefix) { return `${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`; }
 function stamp() { return `${today()} ${new Date().toTimeString().slice(0, 5)}`; }
 function assertRole(role, allowed) { if (!allowed.includes(role)) throw new Error("没有执行该操作的权限"); }
-function roleClassIds(data, role) { return role === "coach" ? ["c1718", "c1516"] : data.classes.map((item) => item.id); }
+function roleClassIds(data, role) { return role === "coach" ? ["c1718", "c1516", "cu7base", "cu8advanced"] : data.classes.map((item) => item.id); }
 function visibleStudents(data, role) {
   if (role === "admin") return data.students;
   if (role === "parent") return data.students.slice(0, 1);
   const ids = roleClassIds(data, role);
-  return data.students.filter((student) => (student.classIds || []).some((id) => ids.includes(id)));
+  return data.students.filter((student) => classesV3.activeClassIds(data, student.id).some((id) => ids.includes(id)));
 }
 function canAccessStudent(data, role, studentId) { return visibleStudents(data, role).some((item) => item.id === studentId); }
 function booked(data, sessionId) { return data.enrollments.filter((item) => item.sessionId === sessionId && item.status === "booked"); }
 function decorateSession(data, session, studentId) {
   const count = booked(data, session.id).length;
   const trials = crm.trialCount(data, session.id);
+  const clubClass = data.classes.find((item) => item.id === session.classId);
   const enrollment = data.enrollments.find((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "booked");
   const waiting = data.waitlist.filter((item) => item.sessionId === session.id && item.status === "waiting").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const waitIndex = waiting.findIndex((item) => item.studentId === studentId);
   const leave = data.leaveRequests.find((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "pending");
-  return { ...session, enrolledCount: count, trialCount: trials, totalCount: count + trials, remaining: Math.max(0, session.capacity - count - trials), myStatus: leave ? "leave_pending" : enrollment ? "booked" : waitIndex >= 0 ? "waiting" : "none", waitlistPosition: waitIndex >= 0 ? waitIndex + 1 : 0 };
+  return { ...session, classType: (clubClass || {}).classType || "REGULAR", classTypeLabel: classesV3.CLASS_TYPES[(clubClass || {}).classType] || "普通班", enrolledCount: count, trialCount: trials, totalCount: count + trials, remaining: Math.max(0, session.capacity - count - trials), isFull: count + trials >= Number(session.capacity || 0), myStatus: leave ? "leave_pending" : enrollment ? "booked" : waitIndex >= 0 ? "waiting_history" : "none", waitlistPosition: waitIndex >= 0 ? waitIndex + 1 : 0 };
 }
-function audit(data, role, action, targetType, targetId, detail) { data.auditLogs.unshift({ id: uid("log"), role, action, targetType, targetId, detail, createdAt: stamp() }); }
+function audit(data, role, action, targetType, targetId, detail) { const fields = detail && typeof detail === "object" ? detail : { detail: String(detail || "") }; data.auditLogs.unshift({ id: uid("log"), role, action, targetType, targetId, ...fields, createdAt: stamp() }); }
 function appendLedger(data, studentId, delta, type, referenceType, referenceId, note) {
   const student = data.students.find((item) => item.id === studentId);
   if (!student) throw new Error("未找到学员");
@@ -109,12 +126,14 @@ async function call(action, input = {}) {
   const userId = role === "admin" ? "admin" : role === "coach" ? "coach1" : "parent1";
   const userName = role === "admin" ? "南联管理员" : role === "coach" ? "游导" : "陈女士";
   const ownStudentId = visibleStudents(data, role)[0] && visibleStudents(data, role)[0].id;
-  if (crm.handles(action)) return crm.call(action, input, { data, role, userId, userName, today: today(), uid, stamp, audit, save, packages: PACKAGES, createStudent: async (student) => saveStudentRecord(data, student) });
+  const classContext = { data, role, userId, userName, uid, stamp, canAccessStudent: (studentId) => canAccessStudent(data, role, studentId), audit: (nextAction, targetType, targetId, detail) => audit(data, role, nextAction, targetType, targetId, detail), save: () => save(data) };
+  if (classesV3.handles(action)) return classesV3.call(action, input, classContext);
+  if (crm.handles(action)) return crm.call(action, input, { data, role, userId, userName, today: today(), uid, stamp, audit, save, packages: PACKAGES, createStudent: async (student) => { const classIds = student.classIds || []; const result = saveStudentRecord(data, { ...student, classIds: [] }); for (const classId of classIds) await classesV3.call("addClassMember", { classId, studentId: result.id, source: "ADMIN_ADD", confirmCapacity: true, remark: "CRM转正式学员编班" }, classContext); return result; } });
   switch (action) {
     case "getContext": return { mode: "local", user: { id: userId, name: userName, role }, needsBinding: false };
     case "getDashboard": {
       const students = visibleStudents(data, role); const ids = students.map((item) => item.id); const classIds = roleClassIds(data, role);
-      const parentClassIds = ((students[0] || {}).classIds || []);
+      const parentClassIds = students[0] ? classesV3.activeClassIds(data, students[0].id) : [];
       const classes = data.classes.filter((item) => role === "parent" ? parentClassIds.includes(item.id) : classIds.includes(item.id));
       const sessions = data.sessions.filter((item) => item.status === "published" && (role === "parent" || classIds.includes(item.classId))).map((item) => decorateSession(data, item, ownStudentId));
       return { role, studentCount: students.length, classCount: classes.length, lowBalance: students.filter((item) => item.remainingLessons <= 5).length, pendingRenewals: data.renewals.filter((item) => item.status === "pending" && (role === "admin" || ids.includes(item.studentId))).length, todayAttendance: data.attendance.filter((item) => item.date === today() && ids.includes(item.studentId)).length, pendingLeaves: data.leaveRequests.filter((item) => item.status === "pending" && (role === "admin" || ids.includes(item.studentId) || classIds.includes((data.sessions.find((s) => s.id === item.sessionId) || {}).classId))).length, waitlistCount: data.waitlist.filter((item) => item.status === "waiting" && (role !== "parent" || ids.includes(item.studentId))).length, recentStudents: [...students].sort((a, b) => a.remainingLessons - b.remainingLessons).slice(0, 3).map((item) => ({ ...item, initial: item.name[0] })), classes, sessions: sessions.slice(0, 4) };
@@ -124,24 +143,29 @@ async function call(action, input = {}) {
       const sessions = data.sessions.filter((item) => role === "admin" || classIds.includes(item.classId));
       return { metrics: { students: visibleStudents(data, role).length, sessions: sessions.length, booked: data.enrollments.filter((item) => item.status === "booked" && sessions.some((s) => s.id === item.sessionId)).length, pendingLeaves: data.leaveRequests.filter((item) => item.status === "pending").length, waiting: data.waitlist.filter((item) => item.status === "waiting").length, pendingRenewals: data.renewals.filter((item) => item.status === "pending").length }, alerts: [{ level: "warning", text: "三江秋季周一/三/五场地时段待确认" }, { level: "danger", text: `${data.students.filter((item) => item.remainingLessons <= 5).length}名学员剩余课时不足5节` }, { level: "info", text: "兼职教练证书等级和有效期需要补录" }], sessions: sessions.map((item) => decorateSession(data, item, ownStudentId)), auditLogs: data.auditLogs.slice(0, 20) };
     }
-    case "listStudents": return visibleStudents(data, role).map((student) => ({ ...student, initial: student.name[0], classNames: data.classes.filter((item) => (student.classIds || []).includes(item.id)).map((item) => item.name).join("、") }));
+    case "listStudents": return visibleStudents(data, role).map((student) => ({ ...student, classIds: classesV3.activeClassIds(data, student.id), initial: student.name[0], classNames: data.classes.filter((item) => classesV3.activeClassIds(data, student.id).includes(item.id)).map((item) => item.name).join("、") }));
     case "getStudent": {
       if (!canAccessStudent(data, role, input.id)) throw new Error("无权查看该学员");
       const student = data.students.find((item) => item.id === input.id);
       const lead = data.leads.find((item) => item.id === student.crmLeadId || item.convertedStudentId === student.id); const trial = lead && data.trialBookings.filter((item) => item.leadId === lead.id).sort((a, b) => b.trialDate.localeCompare(a.trialDate))[0];
-      return { ...student, initial: student.name[0], classes: data.classes.filter((item) => (student.classIds || []).includes(item.id)), attendance: data.attendance.filter((item) => item.studentId === input.id).sort((a, b) => b.date.localeCompare(a.date)), renewals: role === "coach" ? [] : data.renewals.filter((item) => item.studentId === input.id), feedback: data.feedback.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), lessonLedger: data.lessonLedger.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), recruitment: lead ? { source: lead.source, ownerCoachName: lead.ownerCoachName, firstContactAt: lead.createdAt, trialDate: (trial || {}).trialDate || "", trialCoachName: (trial || {}).coachName || "", trialFeedback: ((trial || {}).feedback || {}).summary || "", convertedAt: lead.convertedAt } : null };
+      const activeIds = classesV3.activeClassIds(data, student.id); const selections = (data.eliteSelections || []).filter((item) => item.studentId === student.id).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      const latestSelection = selections[0]; const recommendationStatus = !latestSelection ? "NONE" : latestSelection.status === "APPROVED" ? "SELECTED" : latestSelection.status === "PENDING" ? "RECOMMENDED" : "WATCH";
+      return { ...student, classIds: activeIds, initial: student.name[0], classes: data.classes.filter((item) => activeIds.includes(item.id)).map((item) => classesV3.decorateClass(data, item)), eliteSelections: selections.map((item) => ({ ...item, targetClass: data.classes.find((clubClass) => clubClass.id === item.targetEliteClassId), statusLabel: classesV3.SELECTION_STATUS[item.status] || item.status })), eliteRecommendationStatus: recommendationStatus, attendance: data.attendance.filter((item) => item.studentId === input.id).sort((a, b) => b.date.localeCompare(a.date)), renewals: role === "coach" ? [] : data.renewals.filter((item) => item.studentId === input.id), feedback: data.feedback.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), lessonLedger: data.lessonLedger.filter((item) => item.studentId === input.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), recruitment: lead ? { source: lead.source, ownerCoachName: lead.ownerCoachName, firstContactAt: lead.createdAt, trialDate: (trial || {}).trialDate || "", trialCoachName: (trial || {}).coachName || "", trialFeedback: ((trial || {}).feedback || {}).summary || "", convertedAt: lead.convertedAt } : null };
     }
     case "saveStudent": {
       assertRole(role, ["admin"]); const payload = input.student || {};
       const result = saveStudentRecord(data, payload); audit(data, role, "saveStudent", "student", result.id, payload.name); save(data); return { ok: true, id: result.id };
     }
-    case "listClasses": return data.classes.filter((item) => role === "admin" || roleClassIds(data, role).includes(item.id)).map((item) => ({ ...item, studentCount: item.studentIds.length }));
-    case "getClass": assertRole(role, ["admin"]); return { ...data.classes.find((item) => item.id === input.id) };
+    case "listClasses": {
+      return data.classes.filter((item) => item.status === "ACTIVE" && (role === "admin" || role === "parent" || roleClassIds(data, role).includes(item.id))).map((item) => classesV3.decorateClass(data, item));
+    }
+    case "getClass": assertRole(role, ["admin"]); return classesV3.decorateClass(data, data.classes.find((item) => item.id === input.id));
     case "saveClass": {
       assertRole(role, ["admin"]); const payload = input.clubClass; let classId = payload.id;
-      if (classId) Object.assign(data.classes.find((item) => item.id === classId), payload); else { classId = uid("c"); data.classes.push({ ...payload, id: classId, active: true, studentIds: payload.studentIds || [] }); }
-      data.students.forEach((student) => { const selected = (payload.studentIds || []).includes(student.id); student.classIds = selected ? [...new Set([...(student.classIds || []), classId])] : (student.classIds || []).filter((id) => id !== classId); });
-      audit(data, role, "saveClass", "class", classId, payload.name); save(data); return { id: classId };
+      const normalized = { ...payload, classType: payload.classType === "ELITE" ? "ELITE" : "REGULAR", ageGroup: String(payload.ageGroup || "").trim(), standardCapacity: Math.max(1, Number(payload.standardCapacity || 20)), headCoachName: String(payload.headCoachName || payload.coachName || "").trim(), coachName: String(payload.headCoachName || payload.coachName || "").trim(), assistantCoachName: String(payload.assistantCoachName || "").trim(), schedule: String(payload.schedule || "").trim(), venue: String(payload.venue || "").trim(), status: payload.status === "INACTIVE" ? "INACTIVE" : "ACTIVE", active: payload.status !== "INACTIVE", remark: String(payload.remark || "").trim() };
+      if (!normalized.name || !normalized.ageGroup || !normalized.headCoachName || !normalized.schedule || !normalized.venue) throw new Error("请完整填写班级信息");
+      const previous = classId && data.classes.find((item) => item.id === classId); const previousType = previous && previous.classType; const isNew = !classId; if (classId) Object.assign(previous, normalized); else { classId = uid("c"); data.classes.push({ ...normalized, id: classId, studentIds: [] }); }
+      audit(data, role, previousType && previousType !== normalized.classType ? "changeClassType" : isNew ? "createClass" : "saveClass", "class", classId, { operator: userId, toClassId: classId, reason: normalized.name }); save(data); return { id: classId };
     }
     case "listSessions": {
       const studentId = input.studentId || ownStudentId;
@@ -163,9 +187,9 @@ async function call(action, input = {}) {
       assertRole(role, ["admin", "parent"]); const studentId = input.studentId || ownStudentId;
       if (!canAccessStudent(data, role, studentId)) throw new Error("无权为该学员报名");
       const session = data.sessions.find((item) => item.id === input.sessionId); const student = data.students.find((item) => item.id === studentId);
-      if (!session || session.status !== "published") throw new Error("课程暂不可报名"); if (session.enrollmentMode === "fixed" && role !== "admin") throw new Error("固定梯队课程由管理员统一排入"); if (student.remainingLessons <= 0) throw new Error("剩余课时不足，请先续费");
+      if (!session || session.status !== "published") throw new Error("课程暂不可报名"); const sessionClass = data.classes.find((item) => item.id === session.classId); if (role === "parent" && sessionClass && sessionClass.classType === "ELITE") throw new Error("精英队课程实行俱乐部选拔制"); if (session.enrollmentMode === "fixed" && role !== "admin") throw new Error("固定梯队课程由管理员统一排入"); if (role === "parent" && sessionClass && !classesV3.activeMembers(data, sessionClass.id).some((item) => item.studentId === studentId)) throw new Error("该学员尚未加入本班"); if (student.remainingLessons <= 0) throw new Error("剩余课时不足，请先续费");
       if (data.enrollments.some((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "booked")) return { status: "booked", message: "已报名" };
-      if (booked(data, session.id).length + crm.trialCount(data, session.id) >= session.capacity) { if (!data.waitlist.some((item) => item.sessionId === session.id && item.studentId === studentId && item.status === "waiting")) data.waitlist.push({ id: uid("w"), sessionId: session.id, studentId, status: "waiting", createdAt: stamp() }); audit(data, role, "joinWaitlist", "session", session.id, student.name); save(data); return { status: "waiting", message: "名额已满，已加入候补" }; }
+      if (booked(data, session.id).length + crm.trialCount(data, session.id) >= session.capacity && role !== "admin") return { status: "full", message: "本节课程已满" };
       data.enrollments.push({ id: uid("e"), sessionId: session.id, studentId, status: "booked", createdAt: stamp() }); audit(data, role, "enroll", "session", session.id, student.name); save(data); return { status: "booked", message: "报名成功" };
     }
     case "requestLeave": {
@@ -183,8 +207,8 @@ async function call(action, input = {}) {
       assertRole(role, ["admin", "coach"]); const request = data.leaveRequests.find((item) => item.id === input.id); if (!request || request.status !== "pending") throw new Error("申请状态已变化");
       const leaveSession = data.sessions.find((item) => item.id === request.sessionId); if (role === "coach" && (!leaveSession || !roleClassIds(data, role).includes(leaveSession.classId))) throw new Error("无权审批该课程请假");
       request.status = input.approved ? "approved" : "rejected"; request.reviewedAt = stamp(); request.reviewNote = input.note || "";
-      let promotedStudentId = null; if (input.approved) { const enrollment = data.enrollments.find((item) => item.sessionId === request.sessionId && item.studentId === request.studentId && item.status === "booked"); if (enrollment) enrollment.status = "leave"; promotedStudentId = promoteWaitlist(data, request.sessionId); }
-      audit(data, role, "reviewLeave", "leave", request.id, request.status); save(data); return { ok: true, promotedStudentId };
+      if (input.approved) { const enrollment = data.enrollments.find((item) => item.sessionId === request.sessionId && item.studentId === request.studentId && item.status === "booked"); if (enrollment) enrollment.status = "leave"; }
+      audit(data, role, "reviewLeave", "leave", request.id, request.status); save(data); return { ok: true, promotedStudentId: null };
     }
     case "getAttendanceSheet": {
       assertRole(role, ["admin", "coach"]); let session = input.sessionId ? data.sessions.find((item) => item.id === input.sessionId) : data.sessions.find((item) => item.classId === input.classId && item.date === input.date);

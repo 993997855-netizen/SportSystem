@@ -1,6 +1,6 @@
 <view class="page page-enter">
   <view class="schedule-head brand-hero">
-    <view><view class="eyebrow">NANLIAN FOOTBALL CLUB</view><view class="title">训练课程</view><view class="sub">逐节发布 · 名额透明 · 候补有序</view></view>
+  <view><view class="eyebrow">NANLIAN FOOTBALL CLUB</view><view class="title">训练课程</view><view class="sub">逐节发布 · 名额透明 · 满员停止报名</view></view>
     <image class="logo" src="/images/nanlian-logo.png" mode="aspectFit" />
   </view>
   <picker wx:if="{{role === 'parent' && students.length > 1}}" mode="selector" range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="studentChange"><view class="card student-picker">当前学员：{{students[studentIndex].name}} <text>切换 ›</text></view></picker>
