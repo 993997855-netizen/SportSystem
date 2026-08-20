@@ -1,0 +1,18 @@
+<movable-area class="floating-add-area" style="width:{{areaWidth}}px;height:{{areaHeight}}px;">
+  <movable-view
+    class="floating-add-view {{moving ? 'dragging' : ''}}"
+    direction="all"
+    disabled="{{true}}"
+    animation="{{!moving}}"
+    x="{{x}}"
+    y="{{y}}"
+    bindtouchstart="onTouchStart"
+    catchtouchmove="onTouchMove"
+    bindtouchend="onTouchEnd"
+    bindtouchcancel="onTouchCancel"
+    catchtap="onTap"
+  >
+    <view class="floating-add-ring"><view class="floating-add-button">＋</view></view>
+    <text class="floating-add-hint">长按拖拽</text>
+  </movable-view>
+</movable-area>
