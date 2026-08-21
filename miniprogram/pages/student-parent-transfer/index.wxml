@@ -1,0 +1,13 @@
+<view class="page page-enter">
+  <view class="loading-state" wx:if="{{loading}}">加载中...</view>
+  <block wx:elif="{{ownership}}">
+    <view class="notice">一个孩子只能归属一个家长账号。转移后，原家长的课程、课时、请假、考勤、成长档案、赛事和基本资料权限立即失效。</view>
+    <view class="card">
+      <view class="title">{{ownership.student.name}}</view>
+      <view class="info"><text class="muted">当前归属家长</text><text>{{ownership.ownerParent.name || '未绑定'}}</text></view>
+      <view class="field"><text class="field-label">转移至</text><picker range="{{ownership.parents}}" range-key="name" value="{{parentIndex}}" bindchange="parent"><view class="picker">{{ownership.parents[parentIndex].name || '请选择目标家长'}}</view></picker></view>
+      <view class="field"><text class="field-label">转移原因</text><textarea class="textarea" maxlength="200" placeholder="必填，将写入审计日志" value="{{reason}}" bindinput="reason" /></view>
+    </view>
+    <button class="danger-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="transfer">转移家长归属</button>
+  </block>
+</view>

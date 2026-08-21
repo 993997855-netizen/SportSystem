@@ -1,2 +1,3 @@
 .hint { color: #587064; line-height: 1.65; }
+.photo-label{text-align:center}.avatar-upload{width:190rpx;height:190rpx;border:2rpx dashed #9db5a6;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#587064;margin:12rpx auto}.avatar-upload image{width:184rpx;height:184rpx;border-radius:50%}.photo-help{text-align:center;margin-bottom:28rpx}
 .lesson-readonly { display: grid; grid-template-columns: 1fr 1fr; gap: 18rpx; margin-bottom: 26rpx; }.lesson-readonly view { background: #f4f7f5; border-radius: 16rpx; padding: 22rpx; }.lesson-readonly text { display: block; }.lesson-number { color: #12643b; font-size: 38rpx; font-weight: 800; margin-top: 8rpx; }.field-help { color: #8a918d; font-size: 22rpx; line-height: 1.5; margin-top: 10rpx; }

@@ -1,0 +1,14 @@
+<view class="page page-enter">
+  <view class="loading-state" wx:if="{{loading}}">正在检查...</view>
+  <block wx:elif="{{report}}">
+    <view class="summary card"><view><text>{{report.parentCount}}</text><text>家长账号</text></view><view><text>{{report.studentCount}}</text><text>学员</text></view><view class="{{report.conflictCount ? 'danger' : 'safe'}}"><text>{{report.conflictCount}}</text><text>归属冲突</text></view></view>
+    <view class="notice">检查只生成报告，不会自动删除或修改历史冲突。权威归属字段为 student.ownerParentUserId。</view>
+    <view class="safe-card card" wx:if="{{!report.conflictCount}}">未发现一个学员绑定多个家长账号。</view>
+    <view class="card conflict" wx:for="{{report.conflicts}}" wx:key="studentId">
+      <view class="between"><view class="title">{{item.studentName}}</view><view class="tag danger">DUPLICATE_PARENT_BINDING</view></view>
+      <view class="muted small">studentId：{{item.studentId}}</view>
+      <view class="binding" wx:for="{{item.bindings}}" wx:for-item="binding" wx:key="parentUserId"><view>{{binding.parentName}}（{{binding.parentUserId}}）</view><view class="muted small">{{binding.source}} · {{binding.boundAt}}</view></view>
+      <view class="resolution">{{item.resolution}}</view>
+    </view>
+  </block>
+</view>

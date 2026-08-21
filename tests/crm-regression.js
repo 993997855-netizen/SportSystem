@@ -54,7 +54,7 @@ async function run() {
   assert.strictEqual(followed.status, "TRIAL_COMPLETED");
   assert(followed.followUps.some((item) => item.content === "体验课后回访"), "feedback should create next-day follow-up");
 
-  const converted = await admin("convertLead", { id: created.id, classIds: ["cu8advanced"], packageId: "p14", registrationDate: "2026-08-20", ownerCoachId: "coach1", ownerCoachName: "游导" });
+  const converted = await admin("convertLead", { id: created.id, avatarUrl: "cloud://student-photos/crm.jpg", classIds: ["cu8advanced"], packageId: "p14", registrationDate: "2026-08-20", ownerCoachId: "coach1", ownerCoachName: "游导" });
   const student = await admin("getStudent", { id: converted.id });
   assert.strictEqual(student.remainingLessons, 14);
   assert.strictEqual(student.crmLeadId, created.id);
@@ -62,7 +62,7 @@ async function run() {
   assert(student.lessonLedger.some((item) => item.type === "opening" && item.delta === 14), "conversion should reuse student opening ledger");
 
   const duplicateLead = await admin("saveLead", { lead: { childName: "陈小南", gender: "男", birthday: "2017-03-18", parentName: "陈女士", mobile: "13800001203", source: "微信群", intentionLevel: "B", ownerCoachId: "coach1", ownerCoachName: "游导" } });
-  const duplicateConversion = await admin("convertLead", { id: duplicateLead.id, classIds: ["cu8advanced"], packageId: "p14" });
+  const duplicateConversion = await admin("convertLead", { id: duplicateLead.id, avatarUrl: "cloud://student-photos/duplicate.jpg", classIds: ["cu8advanced"], packageId: "p14" });
   assert(duplicateConversion.duplicate, "conversion should stop on suspected duplicate");
 
   await admin("moveLeadToPublic", { id: "l3" });

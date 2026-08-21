@@ -22,6 +22,6 @@ Page({
     this.setData({ keyword, filtered });
   },
   clearSearch() { this.setData({ keyword: "", filtered: this.data.students }); },
-  open(event) { wx.navigateTo({ url: `/pages/student-detail/index?id=${event.currentTarget.dataset.id}` }); },
-  add() { wx.navigateTo({ url: "/pages/student-form/index" }); }
+  open(event) { const id = event.currentTarget.dataset.id; if (this.data.role === "parent") { getApp().globalData.activeStudentId = id; wx.setStorageSync("activeStudentId", id); } wx.navigateTo({ url: `/pages/student-detail/index?id=${id}` }); },
+  add() { wx.navigateTo({ url: this.data.role === "parent" ? "/pages/parent-child-form/index" : "/pages/student-form/index" }); }
 });

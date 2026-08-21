@@ -6,6 +6,7 @@ App({
       env: "",
       dataMode: "local",
       previewRole: wx.getStorageSync("previewRole") || "admin",
+      activeStudentId: wx.getStorageSync("activeStudentId") || "",
     };
 
     if (wx.cloud && this.globalData.env) {

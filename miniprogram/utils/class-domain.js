@@ -105,7 +105,7 @@ function memberView(data, member) {
   const classes = data.classes.filter((item) => classIds.includes(item.id));
   const latestFeedback = (data.feedback || []).filter((item) => item.studentId === member.studentId).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
   const latestSelection = (data.eliteSelections || []).filter((item) => item.studentId === member.studentId).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
-  return { ...member, student: { ...student, classNames: classes.map((item) => item.name).join("、"), regularClassNames: classes.filter((item) => item.classType === "REGULAR").map((item) => item.name).join("、"), trainingLevel: classes.some((item) => item.classType === "ELITE") ? "精英队" : "普通班" }, latestFeedback: latestFeedback || null, latestSelection: latestSelection || null, statusLabel: MEMBER_STATUS[member.status] || member.status };
+  return { ...member, student: { ...student, initial: (student.name || "学")[0], birthYear: String(student.birthDate || "").slice(0, 4), classNames: classes.map((item) => item.name).join("、"), regularClassNames: classes.filter((item) => item.classType === "REGULAR").map((item) => item.name).join("、"), trainingLevel: classes.some((item) => item.classType === "ELITE") ? "精英队" : "普通班" }, latestFeedback: latestFeedback || null, latestSelection: latestSelection || null, statusLabel: MEMBER_STATUS[member.status] || member.status };
 }
 
 async function call(action, input, ctx) {
