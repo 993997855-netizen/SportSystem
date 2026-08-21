@@ -1,8 +1,9 @@
 const api = require("../../utils/api");
 const { attendanceLabels } = require("../../utils/format");
+const { chooseStudentPhoto } = require("../../utils/student-photo");
 
 Page({
-  data: { id: "", student: null, role: "admin", mode: "local", loading: true, error: "", inviting: false, attendanceLabels },
+  data: { id: "", student: null, role: "admin", mode: "local", loading: true, error: "", inviting: false, uploadingPhoto: false, attendanceLabels },
   onLoad(options) { this.setData({ id: options.id }); },
   onShow() { if (this.data.id) this.load(); },
   async load() {
@@ -11,11 +12,28 @@ Page({
       const [context, student] = await Promise.all([api.call("getContext"), api.call("getStudent", { id: this.data.id })]);
       student.initial = student.name ? student.name[0] : "学";
       student.attendance = student.attendance.map((item) => ({ ...item, statusLabel: attendanceLabels[item.status] }));
+      const labels = { PENDING: "待审核", APPROVED: "已通过", REJECTED: "暂不入选", WITHDRAWN: "已撤销" };
+      student.eliteSelections = (student.eliteSelections || []).map((item) => ({ ...item, statusLabel: labels[item.status] || item.status }));
       this.setData({ student: { ...student, lowBalance: Number(student.remainingLessons) <= 5 }, role: context.user.role, mode: context.mode, loading: false });
     } catch (error) { this.setData({ loading: false, error: "学员详情加载失败" }); }
   },
   edit() { wx.navigateTo({ url: `/pages/student-form/index?id=${this.data.id}` }); },
   renew() { wx.navigateTo({ url: `/pages/renewals/index?studentId=${this.data.id}` }); },
+  growth() { wx.navigateTo({ url: `/pages/growth-profile/index?studentId=${this.data.id}` }); },
+  privateProfile() { wx.navigateTo({ url: `/pages/student-private-profile/index?studentId=${this.data.id}&name=${this.data.student.name}` }); },
+  transferParent() { wx.navigateTo({ url: `/pages/student-parent-transfer/index?studentId=${this.data.id}` }); },
+  async replacePhoto() {
+    if (!["admin", "parent"].includes(this.data.role) || this.data.uploadingPhoto) return;
+    this.setData({ uploadingPhoto: true });
+    try {
+      const avatarUrl = await chooseStudentPhoto();
+      await api.call("updateStudentAvatar", { studentId: this.data.id, avatarUrl });
+      this.setData({ "student.avatarUrl": avatarUrl });
+      wx.showToast({ title: "孩子照片已更新" });
+    } catch (error) { if (!/cancel/i.test(String(error.errMsg || error.message || ""))) wx.showToast({ title: error.message || "照片更新失败", icon: "none" }); }
+    finally { this.setData({ uploadingPhoto: false }); }
+  },
+  elite() { const source = (this.data.student.classes || []).find((item) => item.classType === "REGULAR") || {}; wx.navigateTo({ url: `/pages/elite-action/index?studentId=${this.data.id}&fromClassId=${source.id || ""}` }); },
   async parentInvite() {
     if (this.data.inviting) return;
     this.setData({ inviting: true });

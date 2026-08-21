@@ -5,14 +5,14 @@
   <block wx:else>
   <view class="summary muted small">共 {{filtered.length}} 名学员</view>
   <view class="card pressable student" wx:for="{{filtered}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
-    <view class="avatar">{{item.initial}}</view>
+    <image wx:if="{{item.avatarUrl}}" class="avatar photo" src="{{item.avatarUrl}}" mode="aspectFill"/><view wx:else class="avatar">{{item.initial}}</view>
     <view class="grow">
       <view class="between"><view class="name">{{item.name}}</view><view class="lessons {{item.lowBalance ? 'low' : ''}}">{{item.remainingLessons}} 节</view></view>
-      <view class="muted small meta">{{item.classNames || '未分班'}}</view>
-      <view class="muted small">家长：{{item.guardianName}} · {{item.guardianPhone}}</view>
+      <view class="muted small meta">{{item.classNames || '未分班'}} <text class="photo-missing" wx:if="{{role === 'admin' && !item.avatarUrl}}">照片未完善</text></view>
+      <view class="muted small" wx:if="{{role !== 'parent'}}">家长：{{item.guardianName}} · {{item.guardianPhone}}</view><view class="muted small" wx:else>{{item.birthDate}} · {{item.profileStatus === 'PENDING_REVIEW' ? '待审核' : '资料已确认'}}</view>
     </view>
   </view>
   <view class="empty card" wx:if="{{filtered.length === 0}}">{{keyword ? '没有找到符合条件的学员' : '还没有学员，先创建第一份档案'}}<view class="retry" wx:if="{{!keyword && role === 'admin'}}" bindtap="add">创建学员</view></view>
   </block>
-  <floating-add-button wx:if="{{role === 'admin'}}" bind:add="add" />
+  <floating-add-button wx:if="{{role === 'admin' || role === 'parent'}}" bind:add="add" />
 </view>

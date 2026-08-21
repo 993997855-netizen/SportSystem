@@ -2,9 +2,12 @@
 <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="retry">重新加载</view></view>
 <view class="page page-enter" wx:else>
   <view class="card">
+    <view class="field-label photo-label">孩子照片 *</view><view class="avatar-upload" bindtap="avatar"><image wx:if="{{student.avatarUrl}}" src="{{student.avatarUrl}}" mode="aspectFill"/><view wx:else>{{uploading ? '正在上传...' : '＋ 从相册选择或拍照'}}</view></view><view class="muted small photo-help">仅用于俱乐部内部身份确认</view>
     <view class="field"><text class="field-label">孩子姓名 *</text><input class="input" value="{{student.name}}" data-key="name" bindinput="field" placeholder="请输入姓名" /></view>
     <view class="field"><text class="field-label">性别</text><picker range="{{genders}}" value="{{genderIndex}}" bindchange="gender"><view class="picker">{{student.gender}}</view></picker></view>
     <view class="field"><text class="field-label">出生日期</text><picker mode="date" value="{{student.birthDate}}" bindchange="birthDate"><view class="picker">{{student.birthDate}}</view></picker></view>
+    <view class="field"><text class="field-label">学校 *</text><input class="input" value="{{student.school}}" data-key="school" bindinput="field" placeholder="请输入学校" /></view>
+    <view class="field"><text class="field-label">年级 *</text><input class="input" value="{{student.grade}}" data-key="grade" bindinput="field" placeholder="请输入年级" /></view>
     <view class="field"><text class="field-label">家长姓名 *</text><input class="input" value="{{student.guardianName}}" data-key="guardianName" bindinput="field" placeholder="请输入家长姓名" /></view>
     <view class="field"><text class="field-label">联系电话 *</text><input class="input" value="{{student.guardianPhone}}" data-key="guardianPhone" bindinput="field" type="text" maxlength="11" placeholder="请输入11位手机号" /></view>
     <view class="field"><text class="field-label">紧急联系人</text><input class="input" value="{{student.emergencyContact}}" data-key="emergencyContact" bindinput="field" placeholder="姓名和联系电话" /></view>
@@ -12,11 +15,6 @@
     <view class="field" wx:else><text class="field-label">初始课时</text><input class="input" value="{{student.remainingLessons}}" data-key="remainingLessons" bindinput="field" type="number" /><view class="field-help">建档后的课时变化只能通过点名和续费产生，避免账目被直接修改。</view></view>
     <view class="field"><text class="field-label">健康与伤病备注</text><textarea class="textarea" value="{{student.healthNotes}}" data-key="healthNotes" bindinput="field" placeholder="如过敏、旧伤、训练注意事项" /></view>
   </view>
-  <view class="card">
-    <view class="field-label">分配班级</view>
-    <checkbox-group bindchange="classes">
-      <label class="check" wx:for="{{classes}}" wx:key="id"><checkbox value="{{item.id}}" checked="{{item.checked}}" color="#173B77"/><text>{{item.name}} · {{item.coachName}}</text></label>
-    </checkbox-group>
-  </view>
-  <view class="sticky-action"><button class="btn-primary" disabled="{{saving}}" loading="{{saving}}" bindtap="save">{{saving ? '正在保存' : '保存学员'}}</button></view>
+  <view class="hint card">学员档案与编班已拆分。保存档案后，请在“班级详情”中执行加入、转班或精英队选拔。</view>
+  <view class="sticky-action"><button class="btn-primary" disabled="{{saving || uploading}}" loading="{{saving}}" bindtap="save">{{saving ? '正在保存' : '保存学员'}}</button></view>
 </view>

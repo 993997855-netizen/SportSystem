@@ -1,1 +1,1 @@
-.check { display: flex; align-items: center; gap: 18rpx; padding: 22rpx 0; border-bottom: 1rpx solid #edf0ee; }.check:last-child { border-bottom: 0; }
+.field-help { color: #8a918d; font-size: 22rpx; line-height: 1.5; margin-top: 10rpx; }

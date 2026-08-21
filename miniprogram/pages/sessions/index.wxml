@@ -1,9 +1,9 @@
 <view class="page page-enter">
   <view class="schedule-head brand-hero">
-    <view><view class="eyebrow">NANLIAN FOOTBALL CLUB</view><view class="title">训练课程</view><view class="sub">逐节发布 · 名额透明 · 候补有序</view></view>
+  <view><view class="eyebrow">NANLIAN FOOTBALL CLUB</view><view class="title">训练课程</view><view class="sub">逐节发布 · 名额透明 · 满员停止报名</view></view>
     <image class="logo" src="/images/nanlian-logo.png" mode="aspectFit" />
   </view>
-  <picker wx:if="{{role === 'parent' && students.length > 1}}" mode="selector" range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="studentChange"><view class="card student-picker">当前学员：{{students[studentIndex].name}} <text>切换 ›</text></view></picker>
+  <picker wx:if="{{role === 'parent' && students.length > 1}}" mode="selector" range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="studentChange"><view class="card student-picker"><image wx:if="{{students[studentIndex].avatarUrl}}" src="{{students[studentIndex].avatarUrl}}" mode="aspectFill"/><view wx:else class="picker-fallback">{{students[studentIndex].initial}}</view><view class="grow"><view class="muted small">当前孩子</view><view>{{students[studentIndex].name}}</view></view><text>切换 ›</text></view></picker>
   <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
   <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
   <block wx:else>

@@ -46,16 +46,20 @@ Page({
     const students = this.data.students.map((item) => item.id === student ? { ...item, attendanceStatus: status } : item);
     this.applyStudents(students, true);
   },
+  unlock(event) {
+    const studentId = event.currentTarget.dataset.student;
+    wx.showModal({ title: "修改已批准请假状态", content: "该学员已批准请假且本次不扣课。继续修改会重新计算课时并写入审计日志。", confirmText: "继续修改", success: (result) => { if (!result.confirm) return; const students = this.data.students.map((item) => item.id === studentId ? { ...item, leaveLocked: false, leaveOverride: true } : item); this.setData({ students }); } });
+  },
   trialStatus(event) { const { trial, status } = event.currentTarget.dataset; this.setData({ trialStudents: this.data.trialStudents.map((item) => item.trialId === trial ? { ...item, attendanceStatus: status } : item), dirty: true }); this.enableDirtyWarning(); },
   allTrialPresent() { this.setData({ trialStudents: this.data.trialStudents.map((item) => ({ ...item, attendanceStatus: "present" })), dirty: true }); this.enableDirtyWarning(); },
-  allPresent() { if (this.data.students.length) this.applyStudents(this.data.students.map((item) => ({ ...item, attendanceStatus: "present" })), true); },
+  allPresent() { if (this.data.students.length) this.applyStudents(this.data.students.map((item) => item.leaveLocked ? item : ({ ...item, attendanceStatus: "present" })), true); },
   async submit() {
     if (this.data.saving || (!this.data.students.length && !this.data.trialStudents.length)) return;
     if (this.data.summary.unmarked) { wx.showToast({ title: `还有${this.data.summary.unmarked}人未点名`, icon: "none" }); return; }
     this.setData({ saving: true });
     try {
       if (this.data.trialStudents.some((item) => item.attendanceStatus === "unmarked")) { wx.showToast({ title: "还有体验学员未点名", icon: "none" }); return; }
-      await api.call("submitAttendance", { sessionId: this.data.sessionId, records: this.data.students.map((item) => ({ studentId: item.id, status: item.attendanceStatus })), trialRecords: this.data.trialStudents.map((item) => ({ trialId: item.trialId, status: item.attendanceStatus })) });
+      await api.call("submitAttendance", { sessionId: this.data.sessionId, records: this.data.students.map((item) => ({ studentId: item.id, status: item.attendanceStatus, overrideApprovedLeave: Boolean(item.leaveOverride) })), trialRecords: this.data.trialStudents.map((item) => ({ trialId: item.trialId, status: item.attendanceStatus })) });
       this.clearDirty();
       wx.showToast({ title: "点名已保存" });
     } finally { this.setData({ saving: false }); }

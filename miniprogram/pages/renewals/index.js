@@ -10,9 +10,9 @@ Page({
   async load() {
     this.setData({ loading: true, error: "" });
     try {
-      const [context, renewals, students] = await Promise.all([api.call("getContext"), api.call("listRenewals"), api.call("listStudents")]);
-      const studentIndex = Math.max(0, students.findIndex((item) => item.id === this.data.studentId));
-      this.setData({ role: context.user.role, renewals, students, studentIndex, showForm: context.user.role !== "coach" && Boolean(this.data.studentId), loading: false });
+      const [context, students] = await Promise.all([api.call("getContext"), api.call("listStudents")]); const remembered = this.data.studentId || getApp().globalData.activeStudentId || wx.getStorageSync("activeStudentId"), studentId = context.user.role === "parent" && students.some((item) => item.id === remembered) ? remembered : this.data.studentId; const renewals = await api.call("listRenewals", { studentId: context.user.role === "parent" ? studentId : "" });
+      const studentIndex = Math.max(0, students.findIndex((item) => item.id === studentId));
+      this.setData({ role: context.user.role, renewals, students, studentId, studentIndex, showForm: context.user.role !== "coach" && Boolean(studentId), loading: false });
     } catch (error) { this.setData({ loading: false, error: "续费记录加载失败" }); }
   },
   openForm() { this.setData({ showForm: true }); },
