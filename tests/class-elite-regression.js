@@ -31,7 +31,7 @@ async function run() {
   storage.nanlianClubV2.sessions.push({ id: "se-full-regular", classId: "cu7base", title: "普通班满员课", date: "2026-08-30", time: "19:00", venue: "瓯北中心小学", capacity: 1, status: "published", enrollmentMode: "open" });
   storage.nanlianClubV2.enrollments.push({ id: "e-full-regular", sessionId: "se-full-regular", studentId: "s2", status: "booked", createdAt: "2026-08-20 12:00" });
   const fullSession = await parent("enrollSession", { sessionId: "se-full-regular", studentId: "s1" });
-  assert.strictEqual(full.status, "FULL"); assert.strictEqual(fullSession.status, "full"); checks += 1;
+  assert.strictEqual(full.status, "FULL"); assert.strictEqual(fullSession.status, "booked"); checks += 1;
   assert.strictEqual(storage.nanlianClubV2.waitlist.length, waitlistBefore); checks += 1;
 
   const warning = await admin("addClassMember", { classId: "cu7base", studentId: "s4" });

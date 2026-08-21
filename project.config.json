@@ -59,11 +59,11 @@
     "ignore": [
       {
         "type": "folder",
-        "value": "miniprogram/pages/example"
+        "value": "pages/example"
       },
       {
         "type": "folder",
-        "value": "miniprogram/images/icons"
+        "value": "images/icons"
       },
       {
         "type": "suffix",
@@ -71,51 +71,51 @@
       },
       {
         "type": "file",
-        "value": "miniprogram/envList.js"
+        "value": "envList.js"
       },
       {
         "type": "file",
-        "value": "miniprogram/utils/local-service.js"
+        "value": "utils/local-service.js"
       },
       {
         "type": "prefix",
-        "value": "miniprogram/images/ai_"
+        "value": "images/ai_"
       },
       {
         "type": "prefix",
-        "value": "miniprogram/images/create_"
+        "value": "images/create_"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/avatar.png"
+        "value": "images/avatar.png"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/cloud_dev.png"
+        "value": "images/cloud_dev.png"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/database.png"
+        "value": "images/database.png"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/database_add.png"
+        "value": "images/database_add.png"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/default-goods-image.png"
+        "value": "images/default-goods-image.png"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/env-select.png"
+        "value": "images/env-select.png"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/function_deploy.png"
+        "value": "images/function_deploy.png"
       },
       {
         "type": "file",
-        "value": "miniprogram/images/scf-enter.png"
+        "value": "images/scf-enter.png"
       }
     ],
     "include": []

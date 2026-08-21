@@ -1,0 +1,1 @@
+.notice{background:#fff5df;color:#8a631c;padding:18rpx;border-radius:14rpx;font-size:22rpx;line-height:1.6;margin-bottom:18rpx}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12rpx}

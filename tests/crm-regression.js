@@ -39,7 +39,8 @@ async function run() {
   const due = await admin("listLeads", { view: "due", sort: "next" });
   assert(due.some((item) => item.id === created.id && item.dueBucket), "due center should classify follow-up buckets");
 
-  await rejects(() => admin("createTrial", { leadId: created.id, sessionId: "se2", classId: "cinterest", trialDate: "2026-08-21" }), /名额已满/);
+  storage.nanlianClubV2.sessions.push({ id: "se-crm-full", classId: "cu7base", title: "满员班体验限制", date: "2026-08-21", time: "19:00", venue: "瓯北中心小学", capacity: 20, status: "published" });
+  await rejects(() => admin("createTrial", { leadId: created.id, sessionId: "se-crm-full", classId: "cu7base", trialDate: "2026-08-21" }), /名额已满/);
   const booking = await admin("createTrial", { leadId: created.id, sessionId: "se1", classId: "c1718", trialDate: "2026-08-20", coachName: "游导", venueName: "三江南联球场" });
   const session = await admin("getSession", { id: "se1" });
   assert(session.trialCount >= 2 && session.totalCount === session.enrolledCount + session.trialCount, "experience student should occupy capacity separately");

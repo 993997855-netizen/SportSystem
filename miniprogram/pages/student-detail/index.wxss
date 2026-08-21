@@ -5,3 +5,4 @@
 .record { display: flex; justify-content: space-between; align-items: center; padding: 22rpx 0; border-bottom: 1rpx solid #edf0ee; }.record:last-child { border-bottom: 0; }
 .feedback-content{line-height:1.7;margin:18rpx 0}.feedback-tag{display:inline-block;background:#eaf0f9;color:#173b77;border-radius:99rpx;padding:7rpx 14rpx;margin:0 10rpx 8rpx 0;font-size:21rpx}.ledger{display:flex;justify-content:space-between;align-items:center;padding:18rpx 0;border-bottom:1rpx solid #edf0f5}.ledger:last-child{border:0}.delta{font-size:32rpx;font-weight:750}.plus{color:#17804a}.minus{color:#bd3c3c}
 .elite-action{margin:18rpx 0}
+.growth-entry{display:flex;align-items:center;justify-content:space-between;border-left:8rpx solid #12643b}.growth-entry .card-title{color:#12643b}

@@ -6,6 +6,7 @@
     <view class="grow"><view class="name">{{student.name}}</view><view class="muted small">{{student.gender}} · 出生于 {{student.birthDate}}</view></view>
     <view class="lesson-box {{student.lowBalance ? 'low' : ''}}"><text class="count">{{student.remainingLessons}}</text><text class="small">{{student.lowBalance ? '建议续费' : '剩余课时'}}</text></view>
   </view>
+  <view class="growth-entry card pressable" bindtap="growth"><view><view class="card-title">球员成长档案</view><view class="muted small">阶段测评 · 成长趋势 · 训练评价 · 比赛记录</view></view><text class="link">查看成长 ›</text></view>
 
   <view class="card">
     <view class="between"><view class="card-title">基本信息</view><view><text class="invite" wx:if="{{role === 'admin' && mode === 'cloud'}}" bindtap="parentInvite">家长邀请码</text><text class="edit" wx:if="{{role === 'admin'}}" bindtap="edit">编辑</text></view></view>

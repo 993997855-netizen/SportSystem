@@ -18,6 +18,7 @@ Page({
   },
   edit() { wx.navigateTo({ url: `/pages/student-form/index?id=${this.data.id}` }); },
   renew() { wx.navigateTo({ url: `/pages/renewals/index?studentId=${this.data.id}` }); },
+  growth() { wx.navigateTo({ url: `/pages/growth-profile/index?studentId=${this.data.id}` }); },
   elite() { const source = (this.data.student.classes || []).find((item) => item.classType === "REGULAR") || {}; wx.navigateTo({ url: `/pages/elite-action/index?studentId=${this.data.id}&fromClassId=${source.id || ""}` }); },
   async parentInvite() {
     if (this.data.inviting) return;

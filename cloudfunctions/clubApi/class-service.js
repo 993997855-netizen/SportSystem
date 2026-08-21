@@ -53,21 +53,23 @@ function createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requ
   async function capacityWarning(clubClass, student, confirmed) {
     const count = (await activeMembers(clubClass._id)).length, capacity = Number(clubClass.standardCapacity || 20);
     if (count < capacity || confirmed) return null;
-    return { requiresConfirmation: true, classId: clubClass._id, className: clubClass.name, studentId: student._id, studentName: student.name, currentCount: count, standardCapacity: capacity, nextCount: count + 1, message: `当前班级已达到标准容量${capacity}人，继续添加后班级人数将为${count + 1}人，是否确认？` };
+    return { requiresConfirmation: true, classId: clubClass._id, className: clubClass.name, studentId: student._id, studentName: student.name, currentCount: count, standardCapacity: capacity, nextCount: count + 1, message: `当前班级已达到标准人数${capacity}人。继续添加后，当前人数将变为${count + 1}人。是否确认添加？` };
   }
 
   async function createMember(user, input) {
     const [classResult, studentResult] = await Promise.all([db.collection("classes").doc(input.classId).get(), db.collection("students").doc(input.studentId).get()]); const clubClass = classResult.data, student = studentResult.data;
     if (!clubClass || clubClass.status === "INACTIVE") throw new Error("班级不存在或已停用"); if (!student || student.status !== "active") throw new Error("学员不存在或已停用");
-    const duplicate = (await db.collection("classMembers").where({ classId: clubClass._id, studentId: student._id, status: "ACTIVE" }).limit(1).get()).data[0]; if (duplicate) return { id: duplicate._id, duplicate: true, studentCount: (await activeMembers(clubClass._id)).length };
+    const duplicate = (await db.collection("classMembers").where({ classId: clubClass._id, studentId: student._id, status: "ACTIVE" }).limit(1).get()).data[0]; if (duplicate) return { id: duplicate._id, duplicate: true, message: "该学员已经是本班正式成员。", studentCount: (await activeMembers(clubClass._id)).length };
     const warning = await capacityWarning(clubClass, student, input.confirmCapacity); if (warning) return warning;
     const createdAt = nowText(); const data = { classId: clubClass._id, studentId: student._id, memberType: clubClass.classType || "REGULAR", status: "ACTIVE", joinedAt: input.joinedAt || createdAt, joinedBy: user._id, source: input.source || "ADMIN_ADD", remark: String(input.remark || ""), fromClassId: input.fromClassId || "", selectionId: input.selectionId || "", createdAt, updatedAt: createdAt };
-    const added = await db.collection("classMembers").add({ data }); await syncLegacy(student._id, clubClass._id); const count = (await activeMembers(clubClass._id)).length;
+    const added = await db.collection("classMembers").add({ data });
+    if (data.source === "ELITE_PROMOTION") { const duplicateEvent = (await db.collection("playerGrowthEvents").where({ studentId: student._id, eventType: "ELITE_PROMOTION", sourceId: clubClass._id }).limit(1).get()).data[0]; if (!duplicateEvent) await db.collection("playerGrowthEvents").add({ data: { studentId: student._id, eventType: "ELITE_PROMOTION", sourceId: clubClass._id, title: `进入${clubClass.name}`, description: "经教练推荐与管理员审核进入精英队", eventDate: createdAt.slice(0, 10), visibility: "PARENT_VISIBLE", createdBy: user._id, createdAt } }); }
+    await syncLegacy(student._id, clubClass._id); const count = (await activeMembers(clubClass._id)).length;
     await audit(user, "addClassMember", "classMember", added._id, { operator: user._id, studentId: student._id, fromClassId: input.fromClassId || "", toClassId: clubClass._id, reason: data.source, overCapacity: count > Number(clubClass.standardCapacity || 20) }); return { id: added._id, studentCount: count, overCapacity: Math.max(0, count - Number(clubClass.standardCapacity || 20)) };
   }
 
   async function inactivateMember(user, member, input) {
-    const updatedAt = nowText(); await db.collection("classMembers").doc(member._id).update({ data: { status: "INACTIVE", exitedAt: updatedAt, exitReason: input.reason || "其他", exitedBy: user._id, updatedAt } }); await syncLegacy(member.studentId, member.classId); await audit(user, "removeClassMember", "classMember", member._id, { operator: user._id, studentId: member.studentId, fromClassId: member.classId, toClassId: input.toClassId || "", reason: input.reason || "其他" });
+    const updatedAt = nowText(); await db.collection("classMembers").doc(member._id).update({ data: { status: "INACTIVE", leftAt: updatedAt, leftBy: user._id, leaveReason: input.reason || "其他", exitedAt: updatedAt, exitReason: input.reason || "其他", exitedBy: user._id, updatedAt } }); await syncLegacy(member.studentId, member.classId); await audit(user, "removeClassMember", "classMember", member._id, { operator: user._id, studentId: member.studentId, fromClassId: member.classId, toClassId: input.toClassId || "", reason: input.reason || "其他" });
   }
 
   async function memberView(member, student, classes, feedback, selections) {

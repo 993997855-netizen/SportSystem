@@ -66,7 +66,7 @@ function capacityResult(data, clubClass, student, confirmed) {
   const count = activeMembers(data, clubClass.id).length;
   const capacity = Number(clubClass.standardCapacity || 20);
   if (count < capacity || confirmed) return null;
-  return { requiresConfirmation: true, classId: clubClass.id, className: clubClass.name, studentId: student.id, studentName: student.name, currentCount: count, standardCapacity: capacity, nextCount: count + 1, message: `当前班级已达到标准容量${capacity}人，继续添加后班级人数将为${count + 1}人，是否确认？` };
+  return { requiresConfirmation: true, classId: clubClass.id, className: clubClass.name, studentId: student.id, studentName: student.name, currentCount: count, standardCapacity: capacity, nextCount: count + 1, message: `当前班级已达到标准人数${capacity}人。继续添加后，当前人数将变为${count + 1}人。是否确认添加？` };
 }
 
 function createMember(data, input, ctx) {
@@ -74,12 +74,16 @@ function createMember(data, input, ctx) {
   if (!clubClass || clubClass.status !== "ACTIVE") throw new Error("班级不存在或已停用");
   if (!student || student.status !== "active") throw new Error("学员不存在或已停用");
   const duplicate = (data.classMembers || []).find((item) => item.classId === clubClass.id && item.studentId === student.id && item.status === "ACTIVE");
-  if (duplicate) return { id: duplicate.id, duplicate: true, studentCount: activeMembers(data, clubClass.id).length };
+  if (duplicate) return { id: duplicate.id, duplicate: true, message: "该学员已经是本班正式成员。", studentCount: activeMembers(data, clubClass.id).length };
   const warning = capacityResult(data, clubClass, student, input.confirmCapacity);
   if (warning) return warning;
   const createdAt = now(ctx);
   const item = { id: ctx.uid("cm"), classId: clubClass.id, studentId: student.id, memberType: clubClass.classType, status: "ACTIVE", joinedAt: input.joinedAt || createdAt, joinedBy: ctx.userId, source: input.source || "ADMIN_ADD", remark: String(input.remark || ""), fromClassId: input.fromClassId || "", selectionId: input.selectionId || "", createdAt, updatedAt: createdAt };
   data.classMembers.push(item);
+  if (item.source === "ELITE_PROMOTION") {
+    data.playerGrowthEvents = data.playerGrowthEvents || [];
+    if (!data.playerGrowthEvents.some((event) => event.studentId === student.id && event.eventType === "ELITE_PROMOTION" && event.sourceId === clubClass.id)) data.playerGrowthEvents.push({ id: ctx.uid("ge"), studentId: student.id, eventType: "ELITE_PROMOTION", sourceId: clubClass.id, title: `进入${clubClass.name}`, description: "经教练推荐与管理员审核进入精英队", eventDate: createdAt.slice(0, 10), visibility: "PARENT_VISIBLE", createdBy: ctx.userId, createdAt });
+  }
   syncLegacy(data);
   ctx.audit("addClassMember", "classMember", item.id, { operator: ctx.userId, studentId: student.id, fromClassId: input.fromClassId || "", toClassId: clubClass.id, reason: item.source, overCapacity: activeMembers(data, clubClass.id).length > Number(clubClass.standardCapacity || 20) });
   return { id: item.id, studentCount: activeMembers(data, clubClass.id).length, overCapacity: Math.max(0, activeMembers(data, clubClass.id).length - Number(clubClass.standardCapacity || 20)) };
@@ -87,10 +91,10 @@ function createMember(data, input, ctx) {
 
 function inactivateMember(data, member, input, ctx) {
   member.status = "INACTIVE";
-  member.exitedAt = now(ctx);
-  member.exitReason = input.reason || "其他";
-  member.exitedBy = ctx.userId;
-  member.updatedAt = member.exitedAt;
+  member.leftAt = member.exitedAt = now(ctx);
+  member.leaveReason = member.exitReason = input.reason || "其他";
+  member.leftBy = member.exitedBy = ctx.userId;
+  member.updatedAt = member.leftAt;
   syncLegacy(data);
   ctx.audit("removeClassMember", "classMember", member.id, { operator: ctx.userId, studentId: member.studentId, fromClassId: member.classId, toClassId: input.toClassId || "", reason: member.exitReason });
 }

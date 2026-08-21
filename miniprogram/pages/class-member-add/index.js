@@ -8,7 +8,7 @@ Page({
   add(event) { this.submit(event.currentTarget.dataset.id, false); },
   async submit(studentId, confirmCapacity) {
     if (this.data.addingId) return; this.setData({ addingId: studentId });
-    try { const result = await api.call("addClassMember", { classId: this.data.classId, studentId, confirmCapacity }); if (result.requiresConfirmation) return wx.showModal({ title: "超出标准容量", content: result.message, confirmText: "确认添加", success: (modal) => { if (modal.confirm) this.submit(studentId, true); } }); wx.showToast({ title: result.duplicate ? "学员已在本班" : "添加成功" }); setTimeout(() => wx.navigateBack(), 350); }
+    try { const result = await api.call("addClassMember", { classId: this.data.classId, studentId, confirmCapacity }); if (result.requiresConfirmation) return wx.showModal({ title: "超过标准人数", content: result.message, confirmText: "确认添加", cancelText: "取消", success: (modal) => { if (modal.confirm) this.submit(studentId, true); } }); wx.showToast({ title: result.duplicate ? "已是正式成员" : "添加成功" }); setTimeout(() => wx.navigateBack(), 350); }
     finally { this.setData({ addingId: "" }); }
   }
 });
