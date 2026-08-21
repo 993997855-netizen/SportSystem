@@ -1,12 +1,12 @@
 const api = require("../../utils/api");
 
 Page({
-  data: { id: "", clubClass: null, role: "parent", students: [], studentIndex: 0, loading: true, error: "", includeInactive: false, exitReasons: ["年龄升级", "调整梯队", "训练表现", "长期缺勤", "转会/离队", "其他"] },
+  data: { id: "", clubClass: null, classFinance: null, role: "parent", students: [], studentIndex: 0, loading: true, error: "", includeInactive: false, exitReasons: ["年龄升级", "调整梯队", "训练表现", "长期缺勤", "转会/离队", "其他"] },
   onLoad(options) { this.setData({ id: options.id || "" }); },
   onShow() { if (this.data.id) this.load(); },
   async load() {
     this.setData({ loading: true, error: "" });
-    try { const [context, clubClass, students] = await Promise.all([api.call("getContext"), api.call("getClassDetail", { id: this.data.id, includeInactive: this.data.includeInactive }), api.call("listStudents")]); this.setData({ role: context.user.role, clubClass, students, loading: false }); }
+    try { const [context, clubClass, students] = await Promise.all([api.call("getContext"), api.call("getClassDetail", { id: this.data.id, includeInactive: this.data.includeInactive }), api.call("listStudents")]); const classFinance = context.user.role === "admin" ? await api.call("getClassFinance", { classId: this.data.id }) : null; this.setData({ role: context.user.role, clubClass, classFinance, students, loading: false }); }
     catch (error) { this.setData({ loading: false, error: "班级详情加载失败" }); }
   },
   toggleHistory(event) { this.setData({ includeInactive: event.detail.value }, () => this.load()); },

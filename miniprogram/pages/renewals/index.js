@@ -1,49 +1,14 @@
 const api = require("../../utils/api");
-
 Page({
-  data: {
-    role: "admin", renewals: [], students: [], showForm: false, studentId: "", studentIndex: 0, packageIndex: 1, loading: true, error: "", submitting: false, confirmingId: "",
-    packages: [{ id: "p14", lessons: 14, amount: 1380, label: "一周一练 · 14节 · ¥1380" }, { id: "p28", lessons: 28, amount: 1980, label: "一周两练 · 28节 · ¥1980" }]
-  },
-  onLoad(options) { this.setData({ studentId: options.studentId || "" }); },
-  onShow() { this.load(); },
+  data: { role: "admin", orders: [], students: [], products: [], alerts: [], studentId: "", studentIndex: 0, productIndex: 0, discountAmount: "0", showForm: false, loading: true, submitting: false },
+  onLoad(options) { this.setData({ studentId: options.studentId || "" }); }, onShow() { this.load(); },
   async load() {
-    this.setData({ loading: true, error: "" });
-    try {
-      const [context, students] = await Promise.all([api.call("getContext"), api.call("listStudents")]); const remembered = this.data.studentId || getApp().globalData.activeStudentId || wx.getStorageSync("activeStudentId"), studentId = context.user.role === "parent" && students.some((item) => item.id === remembered) ? remembered : this.data.studentId; const renewals = await api.call("listRenewals", { studentId: context.user.role === "parent" ? studentId : "" });
-      const studentIndex = Math.max(0, students.findIndex((item) => item.id === studentId));
-      this.setData({ role: context.user.role, renewals, students, studentId, studentIndex, showForm: context.user.role !== "coach" && Boolean(studentId), loading: false });
-    } catch (error) { this.setData({ loading: false, error: "续费记录加载失败" }); }
+    this.setData({ loading: true }); const context = await api.call("getContext");
+    if (context.user.role === "coach") { const center = await api.call("getRenewalCenter"); this.setData({ role: "coach", alerts: center.students, loading: false }); return; }
+    const [students, products] = await Promise.all([api.call("listStudents"), api.call("listProducts")]), remembered = this.data.studentId || getApp().globalData.activeStudentId || wx.getStorageSync("activeStudentId"), studentId = context.user.role === "parent" && students.some((item) => item.id === remembered) ? remembered : this.data.studentId || (context.user.role === "parent" && students[0] ? students[0].id : ""), studentIndex = Math.max(0, students.findIndex((item) => item.id === studentId)), orders = await api.call("listOrders", { studentId: context.user.role === "parent" ? studentId : "" }); let alerts = []; if (context.user.role === "admin") alerts = (await api.call("getRenewalCenter")).students;
+    this.setData({ role: context.user.role, students, products: products.filter((item) => item.active), orders, alerts, studentId, studentIndex, loading: false });
   },
-  openForm() { this.setData({ showForm: true }); },
-  closeForm() { if (!this.data.submitting) this.setData({ showForm: false }); },
-  student(event) { this.setData({ studentIndex: Number(event.detail.value) }); },
-  package(event) { this.setData({ packageIndex: Number(event.detail.value) }); },
-  async create() {
-    if (this.data.submitting) return;
-    const student = this.data.students[this.data.studentIndex];
-    const pack = this.data.packages[this.data.packageIndex];
-    if (!student || !pack) { wx.showToast({ title: "请选择学员和套餐", icon: "none" }); return; }
-    this.setData({ submitting: true });
-    try {
-      await api.call("createRenewal", { studentId: student.id, packageId: pack.id });
-      wx.showToast({ title: "续费申请已提交" }); this.setData({ showForm: false, studentId: "" }); this.load();
-    } finally { this.setData({ submitting: false }); }
-  },
-  confirm(event) {
-    const id = event.currentTarget.dataset.id;
-    wx.showModal({
-      title: "确认到账",
-      content: "确认后将立即增加孩子的剩余课时。",
-      success: async (result) => {
-        if (!result.confirm) return;
-        if (this.data.confirmingId) return;
-        this.setData({ confirmingId: id });
-        try {
-          await api.call("confirmRenewal", { id });
-          wx.showToast({ title: "已确认并加课" }); this.load();
-        } finally { this.setData({ confirmingId: "" }); }
-      }
-    });
-  }
+  studentChange(event) { const studentIndex = Number(event.detail.value), student = this.data.students[studentIndex]; this.setData({ studentIndex, studentId: student.id }); if (this.data.role === "parent") { getApp().globalData.activeStudentId = student.id; wx.setStorageSync("activeStudentId", student.id); this.load(); } }, product(event) { this.setData({ productIndex: Number(event.detail.value) }); }, discount(event) { this.setData({ discountAmount: event.detail.value }); }, openForm(event) { const studentId = event.currentTarget.dataset.student || this.data.studentId, studentIndex = Math.max(0, this.data.students.findIndex((item) => item.id === studentId)); this.setData({ showForm: true, studentIndex }); }, closeForm() { if (!this.data.submitting) this.setData({ showForm: false }); },
+  async create() { const student = this.data.students[this.data.studentIndex], product = this.data.products[this.data.productIndex]; if (!student || !product) return wx.showToast({ title: "请选择学员和产品", icon: "none" }); this.setData({ submitting: true }); try { const result = await api.call("createOrder", { studentId: student.id, productId: product.id, discountAmount: this.data.role === "admin" ? Number(this.data.discountAmount || 0) : 0 }); wx.showToast({ title: "订单已创建" }); this.setData({ showForm: false }); wx.navigateTo({ url: `/pages/order-detail/index?id=${result.id}` }); } finally { this.setData({ submitting: false }); } },
+  order(event) { wx.navigateTo({ url: `/pages/order-detail/index?id=${event.currentTarget.dataset.id}` }); }, products() { wx.navigateTo({ url: "/pages/products/index" }); }, finance() { wx.navigateTo({ url: "/pages/finance-dashboard/index" }); }
 });
