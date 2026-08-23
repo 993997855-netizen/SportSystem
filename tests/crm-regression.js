@@ -54,15 +54,20 @@ async function run() {
   assert.strictEqual(followed.status, "TRIAL_COMPLETED");
   assert(followed.followUps.some((item) => item.content === "体验课后回访"), "feedback should create next-day follow-up");
 
-  const converted = await admin("convertLead", { id: created.id, avatarUrl: "cloud://student-photos/crm.jpg", classIds: ["cu8advanced"], packageId: "p14", registrationDate: "2026-08-20", ownerCoachId: "coach1", ownerCoachName: "游导" });
+  const converted = await admin("convertLead", { id: created.id, avatarUrl: "cloud://student-photos/crm.jpg", classIds: ["cu8advanced"], productId: "prod14", registrationDate: "2026-08-20", ownerCoachId: "coach1", ownerCoachName: "游导" });
   const student = await admin("getStudent", { id: converted.id });
-  assert.strictEqual(student.remainingLessons, 14);
+  assert.strictEqual(student.remainingLessons, 0, "conversion must not grant lessons before payment");
   assert.strictEqual(student.crmLeadId, created.id);
   assert.strictEqual(student.recruitment.source, "朋友圈");
-  assert(student.lessonLedger.some((item) => item.type === "opening" && item.delta === 14), "conversion should reuse student opening ledger");
+  const firstOrder = await admin("getOrder", { id: converted.orderId });
+  assert.strictEqual(firstOrder.status, "PENDING", "conversion should create a pending first order");
+  await admin("recordPayment", { orderId: converted.orderId, amount: 1380, transactionRef: "CRM-REGRESSION-PAYMENT", idempotencyKey: "CRM-REGRESSION-PAYMENT" });
+  const paidStudent = await admin("getStudent", { id: converted.id });
+  assert.strictEqual(paidStudent.remainingLessons, 14, "full payment should grant package lessons");
+  assert(paidStudent.lessonLedger.some((item) => item.type === "PACKAGE_PURCHASE" && item.referenceId === converted.orderId && item.delta === 14), "payment should write order-linked package ledger");
 
   const duplicateLead = await admin("saveLead", { lead: { childName: "陈小南", gender: "男", birthday: "2017-03-18", parentName: "陈女士", mobile: "13800001203", source: "微信群", intentionLevel: "B", ownerCoachId: "coach1", ownerCoachName: "游导" } });
-  const duplicateConversion = await admin("convertLead", { id: duplicateLead.id, avatarUrl: "cloud://student-photos/duplicate.jpg", classIds: ["cu8advanced"], packageId: "p14" });
+  const duplicateConversion = await admin("convertLead", { id: duplicateLead.id, avatarUrl: "cloud://student-photos/duplicate.jpg", classIds: ["cu8advanced"], productId: "prod14" });
   assert(duplicateConversion.duplicate, "conversion should stop on suspected duplicate");
 
   await admin("moveLeadToPublic", { id: "l3" });
@@ -76,7 +81,7 @@ async function run() {
 
   const stats = await admin("getCrmStats", { start: "2026-08-01", end: "2026-08-31" });
   assert(stats.summary.leads >= 15 && stats.summary.amount >= 3360, "CRM statistics should aggregate leads and revenue");
-  console.log("CRM regression: 18 checks passed");
+  console.log("CRM regression: 21 checks passed");
 }
 
 run().catch((error) => { console.error(error); process.exitCode = 1; });
