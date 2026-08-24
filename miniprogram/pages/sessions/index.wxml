@@ -9,7 +9,7 @@
   <block wx:else>
     <view class="section-title">近期课程</view>
     <view class="card session pressable" wx:for="{{sessions}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
-      <view class="between"><view class="date"><text>{{item.weekday}}</text><text>{{item.shortDate}}</text></view><view class="grow main"><view class="between"><view class="name">{{item.title}}</view><view class="tag {{item.myStatus === 'booked' ? '' : 'gold'}}">{{item.statusLabel}}</view></view><view class="muted small meta">{{item.time}} · {{item.venue}}</view><view class="focus">本次重点 · {{item.focus}}</view></view></view>
+      <view class="between"><view class="date"><text>{{item.weekday}}</text><text>{{item.shortDate}}</text></view><view class="grow main"><view class="between"><view class="name">{{item.title}}</view><view class="tag {{item.myStatus === 'booked' ? '' : 'gold'}}">{{item.statusLabel}}</view></view><view class="muted small meta">{{item.time}} · {{item.venue}}</view><view class="session-coach"><image wx:if="{{item.coach.avatarUrl}}" src="{{item.coach.avatarUrl}}" mode="aspectFill" /><view wx:else class="coach-avatar-fallback">教</view><text>{{item.coach.name || item.coachName}}</text></view><view class="focus">本次重点 · {{item.focus}}</view></view></view>
     </view>
     <view class="empty card" wx:if="{{sessions.length === 0}}">暂未发布课程</view>
   </block>

@@ -34,6 +34,7 @@ Page({
   activeStudentChange(event) { const index = Number(event.detail.value), student = this.data.familyStudents[index]; if (!student) return; getApp().globalData.activeStudentId = student.id; wx.setStorageSync("activeStudentId", student.id); this.setData({ activeStudentIndex: index, activeStudentId: student.id }, () => this.load()); },
   goStudents() { wx.switchTab({ url: "/pages/students/index" }); },
   goClasses() { wx.navigateTo({ url: "/pages/classes/index" }); },
+  goCoachTeam() { wx.navigateTo({ url: "/pages/coach-team/index" }); },
   goSessions() { wx.switchTab({ url: "/pages/sessions/index" }); },
   goLeaves() { wx.navigateTo({ url: "/pages/leave-requests/index" }); },
   goOperations() { wx.navigateTo({ url: "/pages/operations/index" }); },
