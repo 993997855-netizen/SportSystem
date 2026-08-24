@@ -3,6 +3,7 @@ const { createClassService } = require("./class-service");
 const { createFamilyService } = require("./family-service");
 const { createBusinessService } = require("./business-service");
 const { createPaymentService } = require("./payment-service");
+const { createCoachService } = require("./coach-service");
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const command = db.command;
@@ -12,9 +13,10 @@ const openidList = (name) => String(process.env[name] || "").split(",").map((ite
 const BOOTSTRAP_ADMIN_OPENIDS = openidList("BOOTSTRAP_ADMIN_OPENIDS");
 // 仅用于测试环境；正式发布前删除该环境变量并重新部署云函数。
 const TEST_ROLE_SWITCH_OPENIDS = openidList("TEST_ROLE_SWITCH_OPENIDS");
-const COLLECTIONS = ["users", "students", "studentPrivateProfiles", "parentStudentLinks", "childProfileRequests", "classes", "classMembers", "sessions", "leaveRequests", "attendance", "lessonLedger", "invites", "auditLogs", "notifications", "news", "courseTypes", "pricingRules", "coupons", "couponRedemptions", "orders", "payments"];
+const COLLECTIONS = ["users", "students", "studentPrivateProfiles", "parentStudentLinks", "childProfileRequests", "classes", "classMembers", "sessions", "leaveRequests", "attendance", "lessonLedger", "invites", "auditLogs", "notifications", "news", "courseTypes", "pricingRules", "coupons", "couponRedemptions", "orders", "payments", "coachProfiles"];
 const DEDUCTION = { present: 1, absent: 1, leave: 0, sick: 0 };
-const classService = createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit });
+const coachService = createCoachService({ db, fetchAll, nowText, requireRole, audit });
+const classService = createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, getCoachReference: coachService.getReference });
 const familyService = createFamilyService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit });
 const businessService = createBusinessService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, assertStudentAccess, firstOwnedStudentId });
 const paymentService = createPaymentService({ businessService });
@@ -160,7 +162,7 @@ async function decorateSession(session, studentId) {
   attendanceRows.data.filter((record) => memberIds.has(record.studentId)).forEach((record) => { const key = record.status === "sick" ? "injured" : record.status; if (key in attendanceStats && key !== "expected" && key !== "unmarked") { attendanceStats[key] += 1; attendanceStats.unmarked = Math.max(0, attendanceStats.unmarked - 1); } });
   const leaveStatus = leave && leave.status === "pending" ? "leave_pending" : leave && leave.status === "approved" ? "leave_approved" : leave && leave.status === "rejected" ? "leave_rejected" : "";
   const clubClass = classResult.data || {}; const standardCapacity = Number(clubClass.standardCapacity || session.capacity || 20); const sessionView = publicDoc(session); delete sessionView.checkinCode;
-  return { ...sessionView, standardCapacity, classType: "REGULAR", classTypeLabel: "普通班", memberCount: expected, enrolledCount: expected, totalCount: expected, overCapacity: Math.max(0, expected - standardCapacity), isFull: expected >= standardCapacity, attendanceStats, checkinOpen: session.checkinStatus === "OPEN" && Number(session.checkinExpiresAt || 0) > Date.now(), myStatus: leaveStatus || (memberIds.has(studentId) ? "booked" : "none"), leaveRequestId: leave ? leave._id : "" };
+  return { ...sessionView, coach: await coachService.getReference(session.coachUserId || clubClass.headCoachUserId || clubClass.coachUserId, session.coachName || clubClass.headCoachName), standardCapacity, classType: "REGULAR", classTypeLabel: "普通班", memberCount: expected, enrolledCount: expected, totalCount: expected, overCapacity: Math.max(0, expected - standardCapacity), isFull: expected >= standardCapacity, attendanceStats, checkinOpen: session.checkinStatus === "OPEN" && Number(session.checkinExpiresAt || 0) > Date.now(), myStatus: leaveStatus || (memberIds.has(studentId) ? "booked" : "none"), leaveRequestId: leave ? leave._id : "" };
 }
 async function listSessions(user, input) {
   let sessions = await fetchAll("sessions"); if (user.role === "parent") sessions = sessions.filter((item) => item.status === "published"); if (user.role === "coach") sessions = sessions.filter((item) => (user.classIds || []).includes(item.classId));
@@ -273,11 +275,12 @@ async function getOperationsDashboard(user) {
 
 exports.main = async (event) => {
   try {
-    await ensureCollections(); await classService.ensureMigration(); await businessService.ensureDefaults(); const user = await ensureUser(cloud.getWXContext().OPENID); await familyService.ensureMigration(user); const input = event.data || {}; let data;
+    await ensureCollections(); await classService.ensureMigration(); await businessService.ensureDefaults(); await coachService.ensureDefaults(); const user = await ensureUser(cloud.getWXContext().OPENID); await familyService.ensureMigration(user); const input = event.data || {}; let data;
     if (classService.handles(event.action)) data = await classService.call(event.action, input, user);
     else if (familyService.handles(event.action)) data = await familyService.call(event.action, input, user);
     else if (businessService.handles(event.action)) data = await businessService.call(event.action, input, user);
     else if (paymentService.handles(event.action)) data = await paymentService.call(event.action, input, user, cloud.getWXContext().OPENID);
+    else if (coachService.handles(event.action)) data = await coachService.call(event.action, input, user);
     else switch (event.action) {
       case "getContext": { const openid = cloud.getWXContext().OPENID; const owned = user.role === "parent" ? await allowedStudentIds(user) : []; data = { mode: "cloud", user: { id: user._id, role: user.role, name: user.name }, needsProfile: user.role === "parent" && !owned.length, needsBinding: user.role === "coach" && !(user.classIds || []).length, canSwitchTestRole: canSwitchTestRole(openid) }; break; }
       case "switchTestRole": {
