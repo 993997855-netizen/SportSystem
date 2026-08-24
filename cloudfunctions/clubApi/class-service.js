@@ -4,7 +4,7 @@ const SELECTION_STATUS = { PENDING: "待审核", APPROVED: "已通过", REJECTED
 const EXIT_REASONS = ["年龄升级", "调整梯队", "训练表现", "长期缺勤", "转会/离队", "其他"];
 const ACTIONS = ["getClassMeta", "getClassDetail", "searchStudentsForClass", "addClassMember", "joinClass", "removeClassMember", "transferClassMember", "listEliteSelections", "recommendElite", "reviewEliteSelection", "promoteToElite"];
 
-function createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit }) {
+function createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, getCoachReference }) {
   let migrationReady;
   const handles = (action) => ACTIONS.includes(action);
   const activeMembers = (classId) => fetchAll("classMembers", { classId, status: "ACTIVE" });
@@ -40,7 +40,7 @@ function createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requ
 
   async function decorateClass(clubClass) {
     const members = await activeMembers(clubClass._id); const standardCapacity = Math.max(1, Number(clubClass.standardCapacity || 20)); const studentCount = members.length;
-    return { ...publicDoc(clubClass), classTypeLabel: CLASS_TYPES[clubClass.classType] || clubClass.classType, studentCount, standardCapacity, remainingCapacity: Math.max(0, standardCapacity - studentCount), overCapacity: Math.max(0, studentCount - standardCapacity), isFull: studentCount >= standardCapacity, enrollmentLabel: clubClass.classType === "ELITE" ? "俱乐部选拔制" : studentCount >= standardCapacity ? "本班已满" : "可报名" };
+    return { ...publicDoc(clubClass), headCoach: getCoachReference ? await getCoachReference(clubClass.coachUserId, clubClass.headCoachName || clubClass.coachName) : { name: clubClass.headCoachName || clubClass.coachName || "", avatarUrl: "" }, classTypeLabel: CLASS_TYPES[clubClass.classType] || clubClass.classType, studentCount, standardCapacity, remainingCapacity: Math.max(0, standardCapacity - studentCount), overCapacity: Math.max(0, studentCount - standardCapacity), isFull: studentCount >= standardCapacity, enrollmentLabel: clubClass.classType === "ELITE" ? "俱乐部选拔制" : studentCount >= standardCapacity ? "本班已满" : "可报名" };
   }
 
   function assertClassAccess(user, classId) {

@@ -6,22 +6,24 @@ const { createLeagueService } = require("./league-service");
 const { createFamilyService } = require("./family-service");
 const { createFinanceService } = require("./finance-service");
 const { createTrainingService } = require("./training-service");
+const { createCoachService } = require("./coach-service");
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const command = db.command;
 
 // 上线前替换为公司管理员的真实 OPENID，避免“第一个访问者自动成为管理员”。
 const BOOTSTRAP_ADMIN_OPENIDS = ["REPLACE_WITH_NANLIAN_ADMIN_OPENID"];
-const COLLECTIONS = ["users", "students", "studentPrivateProfiles", "parentStudentLinks", "childProfileRequests", "classes", "classMembers", "eliteSelections", "sessions", "enrollments", "waitlist", "leaveRequests", "attendance", "lessonLedger", "feedback", "renewals", "products", "orders", "payments", "refunds", "financeSettings", "invites", "auditLogs", "leads", "leadFollowUps", "trialBookings", "assessmentTemplates", "assessmentRounds", "playerAssessments", "playerGrowthEvents", "playerMatchRecords", "tournaments", "leagues", "leagueSeasons", "leagueRounds", "teams", "teamMembers", "seasonTeams", "externalPlayers", "matches", "matchSquads", "curriculums", "trainingCycles", "weeklyTrainingPlans", "trainingPlanTemplates", "sessionTrainingPlans", "trainingExecutions", "trainingPlanFavorites"];
+const COLLECTIONS = ["users", "students", "studentPrivateProfiles", "parentStudentLinks", "childProfileRequests", "classes", "classMembers", "eliteSelections", "sessions", "enrollments", "waitlist", "leaveRequests", "attendance", "lessonLedger", "feedback", "renewals", "products", "orders", "payments", "refunds", "financeSettings", "invites", "auditLogs", "leads", "leadFollowUps", "trialBookings", "assessmentTemplates", "assessmentRounds", "playerAssessments", "playerGrowthEvents", "playerMatchRecords", "tournaments", "leagues", "leagueSeasons", "leagueRounds", "teams", "teamMembers", "seasonTeams", "externalPlayers", "matches", "matchSquads", "curriculums", "trainingCycles", "weeklyTrainingPlans", "trainingPlanTemplates", "sessionTrainingPlans", "trainingExecutions", "trainingPlanFavorites", "coachProfiles"];
 const DEDUCTION = { present: 1, absent: 1, leave: 0, sick: 0 };
 const PACKAGES = {
   p14: { name: "一周一练", lessons: 14, amount: 1380 },
   p28: { name: "一周两练", lessons: 28, amount: 1980 }
 };
 const crmApi = createCrmApi({ db, command, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, saveStudent, packages: PACKAGES, createFinanceOrder: (user, input) => financeService.call("createOrder", input, user) });
-const classService = createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit });
+const coachService = createCoachService({ db, fetchAll, nowText, requireRole, audit });
+const classService = createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, getCoachReference: coachService.getReference });
 const growthService = createGrowthService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit });
-const leagueService = createLeagueService({ db, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit });
+const leagueService = createLeagueService({ db, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, getCoachReference: coachService.getReference });
 const familyService = createFamilyService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit });
 const financeService = createFinanceService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, assertStudentAccess, allowedStudentIds });
 const trainingService = createTrainingService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, assertStudentAccess, allowedStudentIds });
@@ -130,7 +132,7 @@ async function decorateSession(session, studentId) {
   attendanceRows.data.filter((record) => memberIds.has(record.studentId)).forEach((record) => { const key = record.status === "sick" ? "injured" : record.status; if (key in attendanceStats && key !== "expected" && key !== "unmarked") { attendanceStats[key] += 1; attendanceStats.unmarked = Math.max(0, attendanceStats.unmarked - 1); } });
   const leaveStatus = leave && leave.status === "pending" ? "leave_pending" : leave && leave.status === "approved" ? "leave_approved" : leave && leave.status === "rejected" ? "leave_rejected" : "";
   const clubClass = classResult.data || {}; const standardCapacity = Number(clubClass.standardCapacity || session.capacity || 20); const totalCount = expected + trialCount.total;
-  return { ...publicDoc(session), standardCapacity, classType: clubClass.classType || "REGULAR", classTypeLabel: clubClass.classType === "ELITE" ? "精英队" : "普通班", memberCount: expected, enrolledCount: expected, trialCount: trialCount.total, totalCount, overCapacity: Math.max(0, expected - standardCapacity), isFull: expected >= standardCapacity, attendanceStats, myStatus: leaveStatus || (memberIds.has(studentId) ? "booked" : "none"), leaveRequestId: leave ? leave._id : "" };
+  return { ...publicDoc(session), coach: await coachService.getReference(session.coachUserId || clubClass.coachUserId, session.coachName || clubClass.headCoachName), standardCapacity, classType: clubClass.classType || "REGULAR", classTypeLabel: clubClass.classType === "ELITE" ? "精英队" : "普通班", memberCount: expected, enrolledCount: expected, trialCount: trialCount.total, totalCount, overCapacity: Math.max(0, expected - standardCapacity), isFull: expected >= standardCapacity, attendanceStats, myStatus: leaveStatus || (memberIds.has(studentId) ? "booked" : "none"), leaveRequestId: leave ? leave._id : "" };
 }
 async function listSessions(user, input) {
   let sessions = await fetchAll("sessions"); if (user.role === "parent") sessions = sessions.filter((item) => item.status === "published"); if (user.role === "coach") sessions = sessions.filter((item) => (user.classIds || []).includes(item.classId));
@@ -237,7 +239,7 @@ async function getOperationsDashboard(user) {
 
 exports.main = async (event) => {
   try {
-    await ensureCollections(); await classService.ensureMigration(); await growthService.ensureDefaults(); await leagueService.ensureDefaults(); await financeService.ensureDefaults(); await trainingService.ensureDefaults(); const user = await ensureUser(cloud.getWXContext().OPENID); await familyService.ensureMigration(user); const input = event.data || {}; let data;
+    await ensureCollections(); await classService.ensureMigration(); await growthService.ensureDefaults(); await leagueService.ensureDefaults(); await financeService.ensureDefaults(); await trainingService.ensureDefaults(); await coachService.ensureDefaults(); const user = await ensureUser(cloud.getWXContext().OPENID); await familyService.ensureMigration(user); const input = event.data || {}; let data;
     if (classService.handles(event.action)) data = await classService.call(event.action, input, user);
     else if (crmApi.handles(event.action)) data = await crmApi.call(event.action, user, input);
     else if (growthService.handles(event.action)) data = await growthService.call(event.action, input, user);
@@ -245,6 +247,7 @@ exports.main = async (event) => {
     else if (familyService.handles(event.action)) data = await familyService.call(event.action, input, user);
     else if (financeService.handles(event.action)) data = await financeService.call(event.action, input, user);
     else if (trainingService.handles(event.action)) data = await trainingService.call(event.action, input, user);
+    else if (coachService.handles(event.action)) data = await coachService.call(event.action, input, user);
     else switch (event.action) {
       case "getContext": { const owned = user.role === "parent" ? await allowedStudentIds(user) : []; data = { mode: "cloud", user: { id: user._id, role: user.role, name: user.name }, needsBinding: user.role !== "admin" && user.role === "parent" ? !owned.length : user.role !== "admin" && !(user.classIds || []).length }; break; }
       case "getDashboard": data = await getDashboard(user, input); break;

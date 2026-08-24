@@ -2,6 +2,7 @@ const CLASS_TYPES = { REGULAR: "普通班", ELITE: "精英队" };
 const MEMBER_STATUS = { ACTIVE: "在队", INACTIVE: "已退出" };
 const SELECTION_STATUS = { PENDING: "待审核", APPROVED: "已通过", REJECTED: "暂不入选", WITHDRAWN: "已撤销" };
 const EXIT_REASONS = ["年龄升级", "调整梯队", "训练表现", "长期缺勤", "转会/离队", "其他"];
+const { coachReference } = require("./coach-profile-domain");
 
 const ACTIONS = [
   "getClassMeta", "getClassDetail", "searchStudentsForClass", "addClassMember", "joinClass",
@@ -52,7 +53,7 @@ function ensure(data, ctx) {
 function decorateClass(data, clubClass) {
   const studentCount = activeMembers(data, clubClass.id).length;
   const standardCapacity = Math.max(1, Number(clubClass.standardCapacity || 20));
-  return { ...clubClass, classTypeLabel: CLASS_TYPES[clubClass.classType] || clubClass.classType, studentCount, standardCapacity, remainingCapacity: Math.max(0, standardCapacity - studentCount), overCapacity: Math.max(0, studentCount - standardCapacity), isFull: studentCount >= standardCapacity, enrollmentLabel: clubClass.classType === "ELITE" ? "俱乐部选拔制" : studentCount >= standardCapacity ? "本班已满" : "可报名" };
+  return { ...clubClass, headCoach: coachReference(data, clubClass.coachUserId, clubClass.headCoachName || clubClass.coachName), classTypeLabel: CLASS_TYPES[clubClass.classType] || clubClass.classType, studentCount, standardCapacity, remainingCapacity: Math.max(0, standardCapacity - studentCount), overCapacity: Math.max(0, studentCount - standardCapacity), isFull: studentCount >= standardCapacity, enrollmentLabel: clubClass.classType === "ELITE" ? "俱乐部选拔制" : studentCount >= standardCapacity ? "本班已满" : "可报名" };
 }
 
 function assertClassAccess(data, role, userId, classId) {

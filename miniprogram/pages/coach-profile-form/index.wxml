@@ -1,0 +1,25 @@
+<view class="page page-enter">
+  <view class="form-section public-section"><view class="form-title">家长公开资料</view><view class="form-tip">家长端只读取本区域的精简字段。</view>
+    <view class="photo-title">教练照片</view><view class="avatar-editor"><image wx:if="{{previewAvatarUrl || coach.avatarUrl}}" src="{{previewAvatarUrl || coach.avatarUrl}}" mode="aspectFill" bindtap="previewPhoto"/><view wx:else class="avatar-empty">默认头像</view><view class="photo-name">{{coach.name || '新教练'}}</view><view class="photo-empty-tip" wx:if="{{!previewAvatarUrl && !coach.avatarUrl}}">暂未上传教练照片</view><button class="photo-change" loading="{{uploading}}" bindtap="avatar">{{previewAvatarUrl || coach.avatarUrl ? '修改照片' : '上传照片'}}</button><view class="photo-actions" wx:if="{{id && photoDirty}}"><button class="photo-cancel" bindtap="cancelAvatar">取消修改</button><button class="photo-save" loading="{{savingAvatar}}" bindtap="saveAvatar">保存照片</button></view><text class="photo-hint" wx:if="{{id && photoDirty}}">当前显示新照片预览，保存前不会替换正式头像。</text></view>
+    <view class="field"><text class="field-label">姓名 *</text><input class="input" value="{{coach.name}}" data-key="name" bindinput="field"/></view>
+    <view class="field"><text class="field-label">公开职务 *</text><input class="input" value="{{coach.publicTitle}}" placeholder="如：U8精英队主教练" data-key="publicTitle" bindinput="field"/></view>
+    <view class="field"><text class="field-label">最高等级教练证书 *</text><input class="input" value="{{coach.highestCertificate}}" data-key="highestCertificate" bindinput="field"/></view>
+    <view class="field"><text class="field-label">执教年限 *</text><input class="input" type="number" value="{{coach.coachingYears}}" data-key="coachingYears" bindinput="field"/></view>
+    <view class="field"><text class="field-label">主要负责班级</text><textarea class="textarea compact" value="{{currentClassesText}}" placeholder="每行或用顿号分隔；家长端最多显示3个，其余折叠" data-key="currentClassesText" bindinput="textField"/></view>
+    <view class="field"><text class="field-label">擅长方向</text><input class="input" value="{{specialtiesText}}" placeholder="按重要性排序；家长端只显示前3项" data-key="specialtiesText" bindinput="textField"/></view>
+    <view class="field"><view class="between"><text class="field-label">简短介绍 *</text><text class="counter {{shortBioCount > 120 ? 'over' : ''}}">{{shortBioCount}} / 120</text></view><textarea class="textarea" maxlength="120" value="{{coach.shortBio}}" placeholder="建议60～100字，说明负责年龄段与训练方式" data-key="shortBio" bindinput="field"/></view>
+    <view class="field"><text class="field-label">其他公开证书</text><textarea class="textarea compact" value="{{publicCertificatesText}}" placeholder="每行一个；详情页默认只展开前2个" data-key="publicCertificatesText" bindinput="textField"/></view>
+    <view class="between switch-row"><text>对家长公开</text><switch checked="{{coach.isPublic}}" data-key="isPublic" bindchange="toggle" color="#173b77"/></view>
+  </view>
+  <view class="form-section internal-section"><view class="form-title">内部详细资料</view><view class="form-tip">以下内容仅管理员读取，不进入家长接口。</view>
+    <view class="field"><text class="field-label">完整详细简介</text><textarea class="textarea" value="{{coach.bio}}" data-key="bio" bindinput="field"/></view>
+    <view class="field"><text class="field-label">完整执教经历</text><textarea class="textarea" value="{{careerHistoryText}}" placeholder="每行一条" data-key="careerHistoryText" bindinput="textField"/></view>
+    <view class="field"><text class="field-label">足球经历</text><textarea class="textarea" value="{{footballHistoryText}}" placeholder="每行一条" data-key="footballHistoryText" bindinput="textField"/></view>
+    <view class="field"><text class="field-label">训练理念</text><textarea class="textarea compact" value="{{coach.trainingPhilosophy}}" data-key="trainingPhilosophy" bindinput="field"/></view>
+    <view class="field"><text class="field-label">所有荣誉</text><textarea class="textarea" value="{{honorsText}}" placeholder="每行一条" data-key="honorsText" bindinput="textField"/></view>
+    <view class="field"><text class="field-label">内部证书</text><textarea class="textarea compact" value="{{internalCertificatesText}}" placeholder="不会向家长公开" data-key="internalCertificatesText" bindinput="textField"/></view>
+    <view class="field"><text class="field-label">内部备注</text><textarea class="textarea" value="{{coach.internalNote}}" placeholder="薪资、绩效等内部信息" data-key="internalNote" bindinput="field"/></view>
+    <view class="between switch-row"><text>资料启用</text><switch checked="{{coach.active}}" data-key="active" bindchange="toggle" color="#173b77"/></view>
+  </view>
+  <button class="btn-primary" loading="{{saving}}" bindtap="save">保存教练资料</button>
+</view>

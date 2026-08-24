@@ -10,7 +10,7 @@ async function rejects(fn, pattern) { let error; try { await fn(); } catch (caug
 async function run() {
   let checks = 0;
   await admin("resetDemo");
-  const dashboard = await admin("getLeagueDashboard");
+  const dashboard = await admin("getLeagueDashboard", { today: "2026-08-23" });
   assert.strictEqual(dashboard.league.leagueType, "GROWTH_LEAGUE"); checks += 1;
   assert.strictEqual(dashboard.rounds.length, 8); checks += 1;
   assert.strictEqual(dashboard.teams.filter((item) => item.organizationType === "INTERNAL").length, 3); assert.strictEqual(dashboard.teams.filter((item) => item.organizationType === "EXTERNAL").length, 3); checks += 1;

@@ -6,6 +6,7 @@ const league = require("./league-domain");
 const family = require("./family-domain");
 const finance = require("./finance-domain");
 const training = require("./training-domain");
+const coachProfiles = require("./coach-profile-domain");
 
 const STORAGE_KEY = "nanlianClubV2";
 const PACKAGES = {
@@ -80,6 +81,7 @@ function load() {
   family.ensure(data, { stamp });
   finance.ensure(data, { stamp });
   training.ensure(data);
+  coachProfiles.ensure(data);
   save(data);
   return data;
 }
@@ -109,7 +111,7 @@ function decorateSession(data, session, studentId) {
   records.forEach((record) => { const key = record.status === "sick" ? "injured" : record.status; if (key in attendanceStats && key !== "expected" && key !== "unmarked") { attendanceStats[key] += 1; attendanceStats.unmarked = Math.max(0, attendanceStats.unmarked - 1); } });
   const leaveStatus = leave && leave.status === "pending" ? "leave_pending" : leave && leave.status === "approved" ? "leave_approved" : leave && leave.status === "rejected" ? "leave_rejected" : "";
   const standardCapacity = Number((clubClass || {}).standardCapacity || session.capacity || 20);
-  return { ...session, standardCapacity, classType: (clubClass || {}).classType || "REGULAR", classTypeLabel: classesV3.CLASS_TYPES[(clubClass || {}).classType] || "普通班", memberCount: count, enrolledCount: count, trialCount: trials, totalCount: count + trials, overCapacity: Math.max(0, count - standardCapacity), isFull: count >= standardCapacity, attendanceStats, myStatus: leaveStatus || (isMember ? "booked" : "none"), leaveRequestId: leave ? leave.id : "" };
+  return { ...session, coach: coachProfiles.coachReference(data, session.coachUserId || (clubClass || {}).coachUserId, session.coachName || (clubClass || {}).headCoachName), standardCapacity, classType: (clubClass || {}).classType || "REGULAR", classTypeLabel: classesV3.CLASS_TYPES[(clubClass || {}).classType] || "普通班", memberCount: count, enrolledCount: count, trialCount: trials, totalCount: count + trials, overCapacity: Math.max(0, count - standardCapacity), isFull: count >= standardCapacity, attendanceStats, myStatus: leaveStatus || (isMember ? "booked" : "none"), leaveRequestId: leave ? leave.id : "" };
 }
 function audit(data, role, action, targetType, targetId, detail) { const fields = detail && typeof detail === "object" ? detail : { detail: String(detail || "") }; data.auditLogs.unshift({ id: uid("log"), role, action, targetType, targetId, ...fields, createdAt: stamp() }); }
 function appendLedger(data, studentId, delta, type, referenceType, referenceId, note) {
@@ -154,6 +156,7 @@ async function call(action, input = {}) {
   if (family.handles(action)) return family.call(action, input, classContext);
   if (finance.handles(action)) return finance.call(action, input, classContext);
   if (training.handles(action)) return training.call(action, input, classContext);
+  if (coachProfiles.handles(action)) return coachProfiles.call(action, input, classContext);
   switch (action) {
     case "getContext": return { mode: "local", user: { id: userId, name: userName, role }, needsBinding: false };
     case "getDashboard": {

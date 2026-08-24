@@ -42,6 +42,7 @@ Page({
   goOperations() { wx.navigateTo({ url: "/pages/operations/index" }); },
   goCrm() { wx.navigateTo({ url: "/pages/crm-dashboard/index" }); },
   goLeague() { wx.navigateTo({ url: "/pages/league-dashboard/index" }); },
+  goCoachTeam() { wx.navigateTo({ url: "/pages/coach-team/index" }); },
   goRenewals() { wx.navigateTo({ url: "/pages/renewals/index" }); },
   goStat4() { if (this.data.dashboard.role === "coach") this.goClasses(); else this.goRenewals(); },
   goStudent(event) { wx.navigateTo({ url: `/pages/student-detail/index?id=${event.currentTarget.dataset.id}` }); },
