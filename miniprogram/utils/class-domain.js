@@ -2,6 +2,7 @@ const CLASS_TYPES = { REGULAR: "普通班", ELITE: "精英队" };
 const MEMBER_STATUS = { ACTIVE: "在队", INACTIVE: "已退出" };
 const SELECTION_STATUS = { PENDING: "待审核", APPROVED: "已通过", REJECTED: "暂不入选", WITHDRAWN: "已撤销" };
 const EXIT_REASONS = ["年龄升级", "调整梯队", "训练表现", "长期缺勤", "转会/离队", "其他"];
+const { coachReference } = require("./coach-profile-domain");
 
 const ACTIONS = [
   "getClassMeta", "getClassDetail", "searchStudentsForClass", "addClassMember", "joinClass",
@@ -55,7 +56,7 @@ function ensure(data, ctx) {
 function decorateClass(data, clubClass) {
   const studentCount = activeMembers(data, clubClass.id).length;
   const standardCapacity = Math.max(1, Number(clubClass.standardCapacity || 20));
-  return { ...clubClass, classTypeLabel: CLASS_TYPES[clubClass.classType] || clubClass.classType, studentCount, standardCapacity, remainingCapacity: Math.max(0, standardCapacity - studentCount), overCapacity: Math.max(0, studentCount - standardCapacity), isFull: studentCount >= standardCapacity, enrollmentLabel: clubClass.classType === "ELITE" ? "俱乐部选拔制" : studentCount >= standardCapacity ? "本班已满" : "可报名" };
+  return { ...clubClass, headCoach: coachReference(data, clubClass.headCoachUserId || clubClass.coachUserId, clubClass.headCoachName || clubClass.coachName), assistantCoaches: (clubClass.assistantCoachIds || []).map((id) => coachReference(data, id, ((data.users || []).find((item) => item.id === id) || {}).name)), classTypeLabel: CLASS_TYPES[clubClass.classType] || clubClass.classType, studentCount, standardCapacity, remainingCapacity: Math.max(0, standardCapacity - studentCount), overCapacity: Math.max(0, studentCount - standardCapacity), isFull: studentCount >= standardCapacity, enrollmentLabel: clubClass.classType === "ELITE" ? "俱乐部选拔制" : studentCount >= standardCapacity ? "本班已满" : "可报名" };
 }
 
 function assertClassAccess(data, role, userId, classId) {
@@ -114,6 +115,7 @@ function memberView(data, member) {
 async function call(action, input, ctx) {
   const { data, role, userId } = ctx;
   ensure(data, ctx);
+  if (["reviewEliteSelection", "promoteToElite"].includes(action) && input.keepSource === undefined) input.keepSource = true;
   if (action === "getClassMeta") return { classTypes: CLASS_TYPES, memberStatuses: MEMBER_STATUS, selectionStatuses: SELECTION_STATUS, exitReasons: EXIT_REASONS, regularClasses: data.classes.filter((item) => item.classType === "REGULAR" && item.status === "ACTIVE").map((item) => decorateClass(data, item)), eliteClasses: data.classes.filter((item) => item.classType === "ELITE" && item.status === "ACTIVE").map((item) => decorateClass(data, item)) };
   if (action === "getClassDetail") {
     assertClassAccess(data, role, userId, input.id);
@@ -159,7 +161,7 @@ async function call(action, input, ctx) {
     if (!["admin", "coach"].includes(role)) throw new Error("仅管理员或教练可提交精英队推荐");
     const target = getClass(data, input.targetEliteClassId); if (!target || target.classType !== "ELITE") throw new Error("请选择目标精英队");
     if (!ctx.canAccessStudent(input.studentId)) throw new Error("无权推荐该学员");
-    if (role === "coach" && !activeMembers(data, input.fromClassId).some((item) => item.studentId === input.studentId)) throw new Error("只能推荐自己负责班级的学员");
+    if (role === "coach" && (!ctx.canAccessClass(input.fromClassId) || !activeMembers(data, input.fromClassId).some((item) => item.studentId === input.studentId))) throw new Error("只能推荐自己负责班级的学员");
     const reason = String(input.recommendationReason || "").trim(); if (!reason) throw new Error("请填写推荐理由");
     const duplicate = (data.eliteSelections || []).find((item) => item.studentId === input.studentId && item.targetEliteClassId === target.id && item.status === "PENDING"); if (duplicate) throw new Error("该学员已有待审核推荐");
     const createdAt = now(ctx); const item = { id: ctx.uid("es"), studentId: input.studentId, fromClassId: input.fromClassId || "", targetEliteClassId: target.id, recommendationSource: role === "coach" ? "COACH_RECOMMENDATION" : "ADMIN_RECOMMENDATION", recommendedBy: userId, recommenderName: ctx.userName, recommendationReason: reason, status: "PENDING", createdAt, updatedAt: createdAt };

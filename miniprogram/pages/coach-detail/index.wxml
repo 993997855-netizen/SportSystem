@@ -1,0 +1,17 @@
+<view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
+<view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
+<view class="page page-enter coach-page" wx:elif="{{coach}}">
+  <view class="profile-head">
+    <image wx:if="{{coach.avatarUrl}}" class="hero-avatar" src="{{coach.avatarUrl}}" mode="aspectFill"/><view wx:else class="hero-avatar fallback">{{coach.initial}}</view>
+    <view class="coach-name">{{coach.name}}</view><view class="coach-title">{{coach.publicTitle}}</view>
+  </view>
+  <view class="key-grid">
+    <view class="key-item"><view class="key-label">最高教练资质</view><view class="key-value">{{coach.highestCertificate}}</view></view>
+    <view class="key-item"><view class="key-label">青训执教经验</view><view class="key-value">{{coach.coachingYears}} 年</view></view>
+  </view>
+  <view class="card compact-card"><view class="section-heading">当前负责</view><view class="chip-row"><text class="class-chip" wx:for="{{classPreview}}" wx:key="*this">{{item}}</text><text wx:if="{{moreClassCount}}" class="more-label">等{{moreClassCount}}个班级</text></view></view>
+  <view class="card compact-card"><view class="section-heading">擅长方向</view><view class="chip-row"><text class="skill-chip" wx:for="{{coach.specialties}}" wx:key="*this">{{item}}</text></view></view>
+  <view class="card compact-card"><view class="section-heading">教练简介</view><view class="short-bio">{{coach.shortBio}}</view></view>
+  <view class="card compact-card"><view class="section-heading">主要资质</view><view class="certificate primary">{{coach.highestCertificate}}</view><view class="certificate" wx:for="{{visibleCertificates}}" wx:key="*this">{{item}}</view><view wx:if="{{moreCertificateCount || expandedCertificates}}" class="certificate-toggle" bindtap="toggleCertificates">{{expandedCertificates ? '收起更多资质' : '更多资质 +' + moreCertificateCount}}</view></view>
+  <view class="card compact-card" wx:if="{{role === 'admin' && workSummary}}"><view class="section-heading">内部工作数据</view><view class="short-bio">本月实授 {{workSummary.actualCount}} 节 · 主教练 {{workSummary.headCount}} 节 · 助理 {{workSummary.assistantCount}} 节 · 代课 {{workSummary.substituteCount}} 节</view><view class="short-bio">累计 {{workSummary.durationMinutes}} 分钟；赛事带队独立统计 {{workSummary.matchCoachCount}} 次。</view></view>
+</view>

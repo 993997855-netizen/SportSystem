@@ -19,6 +19,7 @@ Page({
   renew() { wx.navigateTo({ url: `/pages/orders/index?studentId=${this.data.id}` }); },
   privateProfile() { wx.navigateTo({ url: `/pages/student-private-profile/index?studentId=${this.data.id}&name=${this.data.student.name}` }); },
   transferParent() { wx.navigateTo({ url: `/pages/student-parent-transfer/index?studentId=${this.data.id}` }); },
+  growth() { wx.navigateTo({ url: `/pages/growth-profile/index?studentId=${this.data.id}` }); },
   async replacePhoto() {
     if (!["admin", "parent"].includes(this.data.role) || this.data.uploadingPhoto) return;
     this.setData({ uploadingPhoto: true });

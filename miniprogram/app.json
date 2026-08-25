@@ -6,6 +6,14 @@
     "pages/session-form/index",
     "pages/students/index",
     "pages/classes/index",
+    "pages/coach-team/index",
+    "pages/coach-detail/index",
+    "pages/coach-profile-form/index",
+    "pages/coach-workbench/index",
+    "pages/coach-schedule/index",
+    "pages/coach-workload/index",
+    "pages/session-coach-edit/index",
+    "pages/family-timetable/index",
     "pages/profile/index",
     "pages/student-detail/index",
     "pages/student-form/index",
@@ -17,6 +25,15 @@
     "pages/class-detail/index",
     "pages/class-member-add/index",
     "pages/class-member-transfer/index",
+    "pages/elite-selections/index",
+    "pages/elite-action/index",
+    "pages/league-dashboard/index",
+    "pages/league-season-form/index",
+    "pages/league-round-detail/index",
+    "pages/league-team-form/index",
+    "pages/league-external-player-form/index",
+    "pages/league-squad/index",
+    "pages/league-match-form/index",
     "pages/attendance/index",
     "pages/leave-requests/index",
     "pages/operations/index",
@@ -26,6 +43,29 @@
     "pages/commerce-admin/index",
     "pages/orders/index",
     "pages/notifications/index"
+    ,"pages/crm-dashboard/index"
+    ,"pages/leads/index"
+    ,"pages/lead-form/index"
+    ,"pages/lead-detail/index"
+    ,"pages/followup-form/index"
+    ,"pages/trials/index"
+    ,"pages/trial-form/index"
+    ,"pages/trial-feedback/index"
+    ,"pages/lead-convert/index"
+    ,"pages/crm-stats/index"
+    ,"pages/research-center/index"
+    ,"pages/curriculums/index"
+    ,"pages/curriculum-form/index"
+    ,"pages/training-cycles/index"
+    ,"pages/training-plan-detail/index"
+    ,"pages/training-execution/index"
+    ,"pages/growth-profile/index"
+    ,"pages/assessment-rounds/index"
+    ,"pages/assessment-round-form/index"
+    ,"pages/assessment-round-detail/index"
+    ,"pages/assessment-form/index"
+    ,"pages/training-evaluation/index"
+    ,"pages/feedback-form/index"
   ],
   "window": {
     "backgroundColor": "#F4F6FA",

@@ -1,0 +1,23 @@
+<view class="page timetable-page">
+  <view class="brand-hero"><view class="eyebrow">NANLIAN MASTER TIMETABLE</view><view class="title">南联课程总表</view><view class="sub">所有视角统一读取 sessions</view></view>
+  <view class="week-nav"><text bindtap="previous">‹ 上一周</text><text class="current" bindtap="current">本周</text><text bindtap="next">下一周 ›</text></view>
+  <picker mode="date" value="{{date}}" bindchange="date"><view class="date-picker">{{timetable.startDate || date}} 至 {{timetable.endDate || date}} · 选择日期 〉</view></picker>
+  <view class="summary"><view><text>{{timetable.stats.total || 0}}</text><text>本周课程</text></view><view data-type="COACH" bindtap="conflict" class="{{conflictType === 'COACH' ? 'active' : ''}}"><text>{{timetable.conflicts.coach || 0}}</text><text>教练冲突</text></view><view data-type="CLASS" bindtap="conflict" class="{{conflictType === 'CLASS' ? 'active' : ''}}"><text>{{timetable.conflicts.class || 0}}</text><text>班级冲突</text></view><view data-type="VENUE" bindtap="conflict" class="{{conflictType === 'VENUE' ? 'active' : ''}}"><text>{{timetable.conflicts.venue || 0}}</text><text>场地冲突</text></view></view>
+  <scroll-view scroll-x class="mode-tabs"><view wx:for="{{modes}}" wx:key="key" class="mode {{mode === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="mode">{{item.label}}</view></scroll-view>
+  <view class="filters"><picker range="{{classTypes}}" range-key="name" value="{{classTypeIndex}}" bindchange="classType"><view>{{classTypes[classTypeIndex].name}}⌄</view></picker><picker range="{{coaches}}" range-key="name" value="{{coachIndex}}" bindchange="coach"><view>{{coaches[coachIndex].name || '全部教练'}}⌄</view></picker><picker range="{{classes}}" range-key="name" value="{{classIndex}}" bindchange="clubClass"><view>{{classes[classIndex].name || '全部班级'}}⌄</view></picker><picker range="{{venues}}" range-key="name" value="{{venueIndex}}" bindchange="venue"><view>{{venues[venueIndex].name || '全部场地'}}⌄</view></picker></view>
+  <view class="loading-state" wx:if="{{loading}}">加载中</view>
+  <view class="empty card" wx:elif="{{error}}">{{error}}<view class="link" bindtap="load">重新加载</view></view>
+  <block wx:else>
+    <view class="group" wx:for="{{groups}}" wx:key="key">
+      <view class="group-title">{{item.label}} <text>{{item.items.length}}项</text></view>
+      <view class="card course" wx:for="{{item.items}}" wx:for-item="course" wx:key="id" data-id="{{course.sessionId}}" data-type="{{course.sourceType}}" bindtap="open">
+        <view class="between"><view><text class="tag">{{course.sourceLabel}}</text><text class="tag type">{{course.classTypeLabel}}</text></view><text class="status">{{course.statusLabel}}</text></view>
+        <view class="course-name">{{course.className}}</view><view class="time">{{course.date}} · {{course.time}}</view><view class="meta">{{course.venue}}</view>
+        <view class="coach" wx:for="{{course.coaches}}" wx:for-item="teacher" wx:key="coachId">{{teacher.name}} · {{teacher.roleLabel}}</view>
+        <view class="theme">{{course.trainingTheme}}<text wx:if="{{course.trainingFocus}}"> · {{course.trainingFocus}}</text></view>
+        <view class="warnings" wx:if="{{course.hasConflict}}"><text wx:if="{{course.conflictCoach}}">⚠ 教练时间冲突</text><text wx:if="{{course.conflictClass}}">⚠ 班级课程冲突</text><text wx:if="{{course.conflictVenue}}">⚠ 场地时间冲突</text></view>
+      </view>
+    </view>
+    <view class="empty card" wx:if="{{!groups.length}}">本周没有符合条件的安排</view>
+  </block>
+</view>

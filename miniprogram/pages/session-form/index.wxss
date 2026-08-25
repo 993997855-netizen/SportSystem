@@ -1,1 +1,2 @@
 .page{padding-bottom:80rpx}.field:last-child{margin-bottom:0}
+.coach-preview{display:flex;justify-content:space-between;padding:16rpx 0;border-bottom:1rpx solid #eef1ef}.coach-preview text:last-child{color:#08783f}.field-help{color:#7a817d;font-size:22rpx;line-height:1.6;margin-top:12rpx}
