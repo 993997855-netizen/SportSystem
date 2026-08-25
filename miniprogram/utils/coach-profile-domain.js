@@ -70,7 +70,9 @@ const DEMO_COACHES = [
     isPublic: true,
     createdAt: "2026-08-01 10:05",
     updatedAt: "2026-08-01 10:05"
-  }
+  },
+  { id: "coach-profile-chen", coachUserId: "coach3", name: "陈教练", avatarUrl: "/images/avatar.png", publicTitle: "青训教练", coachingYears: 5, highestCertificate: "中国足协D级教练员", certificates: [{ name: "中国足协D级教练员", visibility: "PUBLIC", priority: 1 }], currentClasses: ["U8基础班"], specialties: ["传接球", "协调性", "小组配合"], shortBio: "专注小学年龄段足球训练，重视基本技术和小组配合，帮助孩子在稳定、积极的训练环境中建立信心。", bio: "南联青训教练。", careerHistory: [], footballHistory: [], trainingPhilosophy: "把技术学习放进真实比赛情境。", honors: [], internalNote: "演示教练资料。", active: true, isPublic: true, createdAt: "2026-08-01 10:10", updatedAt: "2026-08-01 10:10" },
+  { id: "coach-profile-wu", coachUserId: "coach4", name: "吴教练", avatarUrl: "/images/avatar.png", publicTitle: "青训教练", coachingYears: 4, highestCertificate: "中国足协D级教练员", certificates: [{ name: "中国足协D级教练员", visibility: "PUBLIC", priority: 1 }], currentClasses: ["兴趣班"], specialties: ["足球启蒙", "控球", "比赛指导"], shortBio: "主要参与启蒙与基础阶段训练，关注孩子的训练参与感，通过游戏和比赛帮助孩子理解足球。", bio: "南联青训教练。", careerHistory: [], footballHistory: [], trainingPhilosophy: "让每个孩子都能参与并获得进步。", honors: [], internalNote: "演示教练资料。", active: true, isPublic: true, createdAt: "2026-08-01 10:15", updatedAt: "2026-08-01 10:15" }
 ];
 
 function strings(value) {

@@ -2,3 +2,5 @@
 .attendance-stats{display:grid;grid-template-columns:repeat(5,1fr);text-align:center}.attendance-stats text{display:block}.attendance-stats text:first-child{font-size:32rpx;font-weight:800;color:#173b77}.attendance-stats text:last-child{font-size:20rpx;color:#8a94a5;margin-top:7rpx}
 .checkin-code{font-size:58rpx;font-weight:900;letter-spacing:12rpx;color:#173b77;margin:8rpx 0 22rpx}.checkin-help{line-height:1.6;margin:16rpx 0}.code-input{text-align:center;font-size:40rpx;letter-spacing:12rpx;margin:20rpx 0}
 .detail-coach{display:flex;align-items:center;gap:10rpx}.detail-coach image,.coach-avatar-fallback{width:42rpx;height:42rpx;border-radius:50%}.coach-avatar-fallback{display:flex;align-items:center;justify-content:center;background:#eaf5ee;color:#126b3d;font-size:20rpx;font-weight:700}
+.coach-line{display:flex;justify-content:space-between;padding:14rpx 0;border-bottom:1rpx solid #eef1ef}.coach-label{margin-top:20rpx}
+.training-theme{font-size:32rpx;font-weight:800;color:#12643b;margin-bottom:12rpx}

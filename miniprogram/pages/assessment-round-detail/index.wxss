@@ -1,0 +1,2 @@
+.hero{border-radius:28rpx;padding:34rpx}.title{font-size:38rpx;font-weight:800}.sub{color:#dce6f6;margin-top:12rpx}.progress-text{margin-top:24rpx;font-size:28rpx}.student{display:flex;align-items:center;gap:18rpx}.avatar{width:70rpx;height:70rpx;border-radius:20rpx;background:#e6f3eb;color:#12643b;display:flex;align-items:center;justify-content:center;font-weight:800}.name{font-size:29rpx;font-weight:750}
+

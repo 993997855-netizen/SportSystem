@@ -12,9 +12,11 @@ Page({
   toggleHistory(event) { this.setData({ includeInactive: event.detail.value }, () => this.load()); },
   add() { wx.navigateTo({ url: `/pages/class-member-add/index?classId=${this.data.id}` }); },
   edit() { wx.navigateTo({ url: `/pages/class-form/index?id=${this.data.id}` }); },
+  selections() { wx.navigateTo({ url: `/pages/elite-selections/index?classId=${this.data.id}` }); },
   studentChange(event) { this.setData({ studentIndex: Number(event.detail.value) }); },
   async join() { const student = this.data.students[this.data.studentIndex] || {}; const result = await api.call("joinClass", { classId: this.data.id, studentId: student.id }); wx.showModal({ title: result.status === "FULL" ? "本班已满" : "报名成功", content: result.message, showCancel: false, success: () => this.load() }); },
   transfer(event) { wx.navigateTo({ url: `/pages/class-member-transfer/index?memberId=${event.currentTarget.dataset.member}&classId=${this.data.id}` }); },
+  elite(event) { wx.navigateTo({ url: `/pages/elite-action/index?studentId=${event.currentTarget.dataset.student}&fromClassId=${this.data.id}` }); },
   student(event) { wx.navigateTo({ url: `/pages/student-detail/index?id=${event.currentTarget.dataset.student}` }); },
   remove(event) {
     const memberId = event.currentTarget.dataset.member;

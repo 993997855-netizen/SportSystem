@@ -6,7 +6,7 @@ Page({
   onShow() { if (this.data.id) this.load(); },
   async load() {
     this.setData({ loading: true, error: "" });
-    try { const [context, raw] = await Promise.all([api.call("getContext"), api.call("getSession", { id: this.data.id, studentId: this.data.studentId })]); const session = { ...raw, enrollments: (raw.enrollments || []).map((item) => ({ ...item, student: { ...item.student, initial: item.student && item.student.name ? item.student.name[0] : "学" } })) }; const checkinInfo = context.user.role === "parent" ? null : await api.call("getCheckinInfo", { sessionId: this.data.id }); this.setData({ role: context.user.role, session, checkinInfo, checkinCode: checkinInfo && checkinInfo.code || this.data.checkinCode, progress: session.standardCapacity ? Math.min(100, Math.round(session.memberCount / session.standardCapacity * 100)) : 0, loading: false }); }
+    try { const [context, raw] = await Promise.all([api.call("getContext"), api.call("getSession", { id: this.data.id, studentId: this.data.studentId })]); const session = { ...raw, enrollments: (raw.enrollments || []).map((item) => ({ ...item, student: { ...item.student, initial: item.student && item.student.name ? item.student.name[0] : "学" } })), trialStudents: raw.trialStudents || [] }; const checkinInfo = context.user.role === "parent" ? null : await api.call("getCheckinInfo", { sessionId: this.data.id }); const capacity = Number(session.capacity || session.standardCapacity || 0); this.setData({ role: context.user.role, session, checkinInfo, checkinCode: checkinInfo && checkinInfo.code || this.data.checkinCode, progress: capacity ? Math.min(100, Math.round(session.totalCount / capacity * 100)) : 0, loading: false }); }
     catch (error) { this.setData({ loading: false, error: "课程信息加载失败" }); }
   },
   async primary() {
@@ -24,6 +24,11 @@ Page({
   attendance() { wx.navigateTo({ url: `/pages/attendance/index?sessionId=${this.data.id}` }); },
   leaves() { wx.navigateTo({ url: "/pages/leave-requests/index" }); },
   edit() { wx.navigateTo({ url: `/pages/session-form/index?id=${this.data.id}` }); },
+  coachEdit() { wx.navigateTo({ url: `/pages/session-coach-edit/index?id=${this.data.id}` }); },
+  trainingEdit() { wx.navigateTo({ url: `/pages/training-execution/index?sessionId=${this.data.id}` }); },
+  evaluation() { wx.navigateTo({ url: `/pages/training-evaluation/index?sessionId=${this.data.id}` }); },
+  complete() { wx.showModal({ title: "确认完成课程", content: "完成后将按实际执教教练生成课时流水。", success: async (result) => { if (!result.confirm) return; await api.call("completeSession", { sessionId: this.data.id }); wx.showToast({ title: "课程已完成" }); this.load(); } }); },
+  cancelSession() { wx.showModal({ title: "取消课程", editable: true, placeholderText: "请输入取消原因", success: async (result) => { if (!result.confirm) return; await api.call("cancelSession", { sessionId: this.data.id, reason: result.content }); wx.showToast({ title: "课程已取消" }); this.load(); } }); },
   location() { return new Promise((resolve, reject) => wx.getLocation({ type: "gcj02", isHighAccuracy: true, success: resolve, fail: reject })); },
   code(event) { this.setData({ checkinCode: event.detail.value }); },
   async openCheckin() { if (this.data.openingCheckin) return; this.setData({ openingCheckin: true }); try { const location = await this.location(); const result = await api.call("openCheckin", { sessionId: this.data.id, latitude: location.latitude, longitude: location.longitude, radius: 300, minutes: 30 }); this.setData({ checkinCode: result.code, checkinInfo: { ...result, open: true } }); wx.showModal({ title: "签到已发布", content: `校验码：${result.code}\n范围：${result.radius}米\n有效期：30分钟`, showCancel: false }); await this.load(); } catch (error) { wx.showToast({ title: error.message || "无法发布签到", icon: "none" }); } finally { this.setData({ openingCheckin: false }); } },

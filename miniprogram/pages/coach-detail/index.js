@@ -1,14 +1,15 @@
 const api = require("../../utils/api");
 
 Page({
-  data: { loading: true, error: "", coach: null, expandedCertificates: false, visibleCertificates: [], moreCertificateCount: 0, classPreview: [], moreClassCount: 0 },
+  data: { loading: true, error: "", coach: null, role: "parent", workSummary: null, expandedCertificates: false, visibleCertificates: [], moreCertificateCount: 0, classPreview: [], moreClassCount: 0 },
   onLoad(options) { this.coachId = options.id; this.load(); },
   async load() {
     this.setData({ loading: true, error: "" });
     try {
-      const raw = await api.call("getPublicCoach", { id: this.coachId });
+      const [raw, context] = await Promise.all([api.call("getPublicCoach", { id: this.coachId }), api.call("getContext")]);
       const coach = { ...raw, initial: (raw.name || "教")[0] };
-      this.setData({ coach, loading: false }, () => this.decorate());
+      let workSummary = null; if (context.user.role === "admin") { const profile = await api.call("getCoachProfile", { id: this.coachId }); if (profile.coachUserId) workSummary = await api.call("getCoachWorkSummary", { coachId: profile.coachUserId }); }
+      this.setData({ coach, role: context.user.role, workSummary, loading: false }, () => this.decorate());
     } catch (error) { this.setData({ loading: false, error: "教练介绍加载失败，请稍后重试" }); }
   },
   decorate() {

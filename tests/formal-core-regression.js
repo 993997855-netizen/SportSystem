@@ -10,7 +10,7 @@ const business = read("cloudfunctions/clubApi/business-service.js");
 const payment = read("cloudfunctions/clubApi/payment-service.js");
 const api = read("miniprogram/utils/api.js");
 
-const removedPageFragments = ["crm", "lead", "trial", "league", "growth", "elite", "renewals", "feedback", "training-evaluation"];
+const removedPageFragments = ["renewals"];
 removedPageFragments.forEach((fragment) => assert(!app.pages.some((page) => page.includes(fragment)), `旧页面仍在注册: ${fragment}`));
 assert(!api.includes("local-domain"), "正式测试版不能回退到本地演示数据");
 

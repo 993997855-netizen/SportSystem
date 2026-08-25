@@ -1,0 +1,7 @@
+<view class="page" wx:if="{{!loading}}">
+  <view class="card"><view class="title">{{session.className}}</view><view class="muted">{{session.date}} {{session.time}} · {{session.venue}}</view></view>
+  <view class="section-title">实际执教教练</view>
+  <checkbox-group bindchange="select"><label class="coach" wx:for="{{coaches}}" wx:key="id"><image wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" mode="aspectFill"/><view class="avatar" wx:else>{{item.initial}}</view><view class="grow"><view class="name">{{item.name}}</view><view class="muted">{{item.classNameText || '暂无固定班级'}} · 今日{{item.todayCount}}节</view></view><checkbox value="{{item.id}}" checked="{{item.checked}}" color="#08783f"/></label></checkbox-group>
+  <textarea class="input reason" value="{{reason}}" bindinput="reason" placeholder="代课或调整原因；已完成课程修改时必填"/>
+  <button class="btn-primary" loading="{{saving}}" bindtap="submit">保存本节教练</button>
+</view>

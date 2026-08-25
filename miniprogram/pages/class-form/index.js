@@ -22,7 +22,7 @@ function parseSchedule(schedule) {
 }
 
 Page({
-  data: { id: "", role: "admin", coaches: [], coachIndex: 0, weekdays: WEEKDAYS, scheduleSlots: [{ weekday: "周六", weekdayIndex: 5, startTime: "09:00", endTime: "10:30" }], classTypes: [{ value: "REGULAR", label: "普通班" }, { value: "ELITE", label: "精英队" }], typeIndex: 0, statuses: [{ value: "ACTIVE", label: "启用" }, { value: "INACTIVE", label: "停用" }], statusIndex: 0, clubClass: { name: "", classType: "REGULAR", ageGroup: "", standardCapacity: 20, headCoachUserId: "", headCoachName: "", assistantCoachName: "", schedule: "", venue: "", status: "ACTIVE", remark: "" }, saving: false, loading: true, error: "" },
+  data: { id: "", role: "admin", coaches: [], coachIndex: 0, assistantCoachIds: [], weekdays: WEEKDAYS, scheduleSlots: [{ weekday: "周六", weekdayIndex: 5, startTime: "09:00", endTime: "10:30" }], classTypes: [{ value: "REGULAR", label: "普通班" }, { value: "ELITE", label: "精英队" }], typeIndex: 0, statuses: [{ value: "ACTIVE", label: "启用" }, { value: "INACTIVE", label: "停用" }], statusIndex: 0, clubClass: { name: "", classType: "REGULAR", ageGroup: "", standardCapacity: 20, headCoachUserId: "", headCoachName: "", assistantCoachIds: [], assistantCoachName: "", schedule: "", venue: "", status: "ACTIVE", remark: "" }, saving: false, loading: true, error: "" },
   async onLoad(options) {
     this.options = options;
     wx.setNavigationBarTitle({ title: options.id ? "编辑班级" : "新增班级" });
@@ -32,13 +32,14 @@ Page({
       const clubClass = existing || { ...this.data.clubClass, headCoachUserId: context.user.role === "coach" ? context.user.id : "", headCoachName: context.user.role === "coach" ? context.user.name : "" };
       const coachIndex = Math.max(0, coaches.findIndex((item) => item.id === clubClass.headCoachUserId));
       const scheduleSlots = Array.isArray(clubClass.scheduleSlots) && clubClass.scheduleSlots.length ? clubClass.scheduleSlots.map((slot) => ({ ...slot, weekdayIndex: Math.max(0, WEEKDAYS.indexOf(slot.weekday)) })) : parseSchedule(clubClass.schedule);
-      this.setData({ id: options.id || "", role: context.user.role, coaches, coachIndex, clubClass, scheduleSlots, typeIndex: clubClass.classType === "ELITE" ? 1 : 0, statusIndex: clubClass.status === "INACTIVE" ? 1 : 0, loading: false });
+      this.setData({ id: options.id || "", role: context.user.role, coaches: coaches.map((item) => ({ ...item, checked: (clubClass.assistantCoachIds || []).includes(item.id) })), coachIndex, assistantCoachIds: clubClass.assistantCoachIds || [], clubClass, scheduleSlots, typeIndex: clubClass.classType === "ELITE" ? 1 : 0, statusIndex: clubClass.status === "INACTIVE" ? 1 : 0, loading: false });
     } catch (error) { this.setData({ loading: false, error: "表单加载失败" }); }
   },
   retry() { this.setData({ loading: true, error: "" }); this.onLoad(this.options || {}); },
   field(event) { this.setData({ [`clubClass.${event.currentTarget.dataset.key}`]: event.detail.value }); },
   type(event) { const index = Number(event.detail.value); this.setData({ typeIndex: index, "clubClass.classType": this.data.classTypes[index].value }); },
-  coach(event) { const coachIndex = Number(event.detail.value); const coach = this.data.coaches[coachIndex]; this.setData({ coachIndex, "clubClass.headCoachUserId": coach.id, "clubClass.headCoachName": coach.id ? coach.name : "" }); },
+  coach(event) { const coachIndex = Number(event.detail.value); const coach = this.data.coaches[coachIndex]; const assistantCoachIds = this.data.assistantCoachIds.filter((id) => id !== coach.id); this.setData({ coachIndex, assistantCoachIds, coaches: this.data.coaches.map((item) => ({ ...item, checked: assistantCoachIds.includes(item.id) })), "clubClass.assistantCoachIds": assistantCoachIds, "clubClass.headCoachUserId": coach.id, "clubClass.headCoachName": coach.id ? coach.name : "" }); },
+  assistants(event) { const assistantCoachIds = (event.detail.value || []).filter((id) => id !== this.data.clubClass.headCoachUserId); this.setData({ assistantCoachIds, coaches: this.data.coaches.map((item) => ({ ...item, checked: assistantCoachIds.includes(item.id) })), "clubClass.assistantCoachIds": assistantCoachIds }); },
   slotWeekday(event) { const index = Number(event.currentTarget.dataset.index); const weekdayIndex = Number(event.detail.value); this.setData({ [`scheduleSlots[${index}].weekdayIndex`]: weekdayIndex, [`scheduleSlots[${index}].weekday`]: this.data.weekdays[weekdayIndex] }); },
   slotTime(event) { const index = Number(event.currentTarget.dataset.index); const key = event.currentTarget.dataset.key; this.setData({ [`scheduleSlots[${index}].${key}`]: event.detail.value }); },
   addSlot() { this.setData({ scheduleSlots: [...this.data.scheduleSlots, { weekday: "周六", weekdayIndex: 5, startTime: "09:00", endTime: "10:30" }] }); },
@@ -49,7 +50,7 @@ Page({
     const scheduleSlots = this.data.scheduleSlots.map(({ weekday, startTime, endTime }) => ({ weekday, startTime, endTime }));
     if (scheduleSlots.some((slot) => !slot.weekday || !slot.startTime || !slot.endTime || slot.startTime >= slot.endTime)) { wx.showToast({ title: "请检查训练时段", icon: "none" }); return; }
     const schedule = scheduleSlots.map((slot) => `${slot.weekday} ${slot.startTime}-${slot.endTime}`).join(" / ");
-    const clubClass = { ...this.data.clubClass, name: this.data.clubClass.name.trim(), schedule, scheduleSlots, venue: this.data.clubClass.venue.trim(), standardCapacity: Number(this.data.clubClass.standardCapacity) };
+    const clubClass = { ...this.data.clubClass, assistantCoachIds: this.data.assistantCoachIds.filter((id) => id !== this.data.clubClass.headCoachUserId), name: this.data.clubClass.name.trim(), schedule, scheduleSlots, venue: this.data.clubClass.venue.trim(), standardCapacity: Number(this.data.clubClass.standardCapacity) };
     if (!clubClass.name || !clubClass.ageGroup || !clubClass.headCoachName || !clubClass.venue || clubClass.standardCapacity < 1) { wx.showToast({ title: "请完整填写班级信息", icon: "none" }); return; }
     this.setData({ saving: true });
     try {

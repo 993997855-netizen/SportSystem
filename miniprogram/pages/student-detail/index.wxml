@@ -7,6 +7,7 @@
     <view class="lesson-box {{student.lowBalance ? 'low' : ''}}"><text class="count">{{student.remainingLessons}}</text><text class="small">{{student.lowBalance ? '建议续费' : '剩余课时'}}</text></view>
   </view>
   <view class="muted small photo-tip" wx:if="{{role === 'admin' || role === 'parent'}}">点击孩子照片可从相册选择或重新拍摄</view>
+  <view class="card growth-entry pressable" bindtap="growth"><view><view class="card-title">球员成长档案</view><view class="muted small">阶段测评 · 训练评价 · 历史趋势</view></view><text class="link">查看 ›</text></view>
   <view class="card">
     <view class="between"><view class="card-title">基本信息</view><view><text class="invite" wx:if="{{role === 'admin' && mode === 'cloud' && !student.ownerParentUserId}}" bindtap="parentInvite">家长邀请码</text><text class="edit" wx:if="{{role === 'admin'}}" bindtap="edit">编辑</text></view></view>
     <view class="info"><text class="muted">家长姓名</text><text>{{student.guardianName}}</text></view>
@@ -16,6 +17,11 @@
     <view class="info"><text class="muted">健康备注</text><text class="right">{{student.healthNotes || '无'}}</text></view>
     <view class="info pressable" wx:if="{{role === 'admin'}}" bindtap="privateProfile"><text class="muted">身份信息</text><text class="link">单独授权查看 ›</text></view>
     <view class="info pressable" wx:if="{{role === 'admin'}}" bindtap="transferParent"><text class="muted">家长账号归属</text><text class="link">查看或转移 ›</text></view>
+  </view>
+
+  <view wx:if="{{student.recruitment && role !== 'parent'}}">
+    <view class="section-title">招生来源</view>
+    <view class="card"><view class="info"><text class="muted">来源渠道</text><text>{{student.recruitment.source || '未登记'}}</text></view><view class="info"><text class="muted">招生负责人</text><text>{{student.recruitment.ownerCoachName || '未分配'}}</text></view><view class="info"><text class="muted">首次联系</text><text>{{student.recruitment.firstContactAt || '未登记'}}</text></view><view class="info"><text class="muted">最近体验课</text><text>{{student.recruitment.trialDate || '未参加'}}</text></view><view class="info" wx:if="{{student.recruitment.trialFeedback}}"><text class="muted">体验课反馈</text><text class="right">{{student.recruitment.trialFeedback}}</text></view></view>
   </view>
 
   <view class="section-title">所在班级</view>

@@ -34,7 +34,10 @@ function ensure(data) {
   data.externalPlayers = data.externalPlayers || [];
   data.matches = data.matches || [];
   data.matchSquads = data.matchSquads || [];
-  if (data.leagues.some((item) => item.id === "lg-sunday")) return;
+  if (data.leagues.some((item) => item.id === "lg-sunday")) {
+    if ((data.matches || []).some((item) => item.id === "lm1") && !data.matchSquads.some((item) => item.id === "ms-demo-1")) data.matchSquads.push({ id: "ms-demo-1", matchId: "lm1", teamId: "tm-nl17", memberType: "INTERNAL_STUDENT", studentId: "s-growth", jerseyNumber: 10, starter: true, status: "ACTIVE", createdAt: "2026-08-03 10:10" }, { id: "ms-demo-2", matchId: "lm1", teamId: "tm-nl17", memberType: "INTERNAL_STUDENT", studentId: "s1", jerseyNumber: 7, starter: true, status: "ACTIVE", createdAt: "2026-08-03 10:10" });
+    return;
+  }
   const league = { id: "lg-sunday", tournamentId: "t-growth", name: "南联周日成长联赛", competitionType: "LEAGUE", leagueType: "GROWTH_LEAGUE", recurringRule: "SUNDAY_ALTERNATING_WEEK", oddWeekAgeGroups: [2017, 2018], evenWeekAgeGroups: [2015, 2016], defaultMatchDay: 0, active: true, createdAt: "2026-08-01 10:00" };
   data.leagues.push(league); data.tournaments.push({ id: "t-growth", name: league.name, competitionType: "LEAGUE", leagueId: league.id, active: true });
   const season = { id: "ls-2026-autumn", leagueId: league.id, name: "南联周日成长联赛 · 2026秋季赛季", startDate: "2026-08-23", endDate: "2026-10-11", status: "ACTIVE", scheduleMode: "CALENDAR_WEEK", oddWeekBirthYears: [2017, 2018], evenWeekBirthYears: [2015, 2016], defaultVenueIds: ["三江南联球场"], standingsEnabled: false, pointsRule: { win: 3, draw: 1, loss: 0 }, description: "以成长和比赛体验为核心的固定周日赛事", createdBy: "admin", createdAt: "2026-08-01 10:10", updatedAt: "2026-08-01 10:10" };
@@ -53,6 +56,10 @@ function ensure(data) {
   data.teams.forEach((team) => data.seasonTeams.push({ id: `st-${team.id}`, seasonId: season.id, teamId: team.id, birthYearGroup: team.birthYearGroup, status: "ACTIVE", overrideReason: "" }));
   const round = data.leagueRounds[0], teamIds = ["tm-nl17", "tm-nl18", "tm-ob17", "tm-xx18"];
   pairs(teamIds).forEach((pair, index) => data.matches.push({ id: `lm${index + 1}`, tournamentId: "t-growth", leagueId: league.id, seasonId: season.id, roundId: round.id, homeTeamId: pair[0], awayTeamId: pair[1], matchDate: round.date, startTime: `${String(9 + index).padStart(2, "0")}:00`, venueId: round.venueId, status: "SCHEDULED", homeScore: null, awayScore: null, lessonDeduction: 0, createdAt: "2026-08-03 10:00" }));
+  data.matchSquads.push(
+    { id: "ms-demo-1", matchId: "lm1", teamId: "tm-nl17", memberType: "INTERNAL_STUDENT", studentId: "s-growth", jerseyNumber: 10, starter: true, status: "ACTIVE", createdAt: "2026-08-03 10:10" },
+    { id: "ms-demo-2", matchId: "lm1", teamId: "tm-nl17", memberType: "INTERNAL_STUDENT", studentId: "s1", jerseyNumber: 7, starter: true, status: "ACTIVE", createdAt: "2026-08-03 10:10" }
+  );
 }
 
 function teamView(data, team, role) { if (!team) return {}; const copy = { ...team, coach: coachReference(data, team.coachUserId, team.coachName) }; if (role === "parent") { delete copy.contactMobile; delete copy.coachMobile; delete copy.contactName; } return copy; }

@@ -58,64 +58,104 @@
   "packOptions": {
     "ignore": [
       {
-        "type": "folder",
-        "value": "pages/example"
+        "value": "pages/example",
+        "type": "folder"
       },
       {
-        "type": "folder",
-        "value": "images/icons"
+        "value": "images/icons",
+        "type": "folder"
       },
       {
-        "type": "suffix",
-        "value": ".svg"
+        "value": ".svg",
+        "type": "suffix"
       },
       {
-        "type": "file",
-        "value": "envList.js"
+        "value": "envList.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "utils/local-service.js"
+        "value": "utils/local-service.js",
+        "type": "file"
       },
       {
-        "type": "prefix",
-        "value": "images/ai_"
+        "value": "utils/local-domain.js",
+        "type": "file"
       },
       {
-        "type": "prefix",
-        "value": "images/create_"
+        "value": "utils/class-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/avatar.png"
+        "value": "utils/crm-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/cloud_dev.png"
+        "value": "utils/growth-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/database.png"
+        "value": "utils/league-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/database_add.png"
+        "value": "utils/family-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/default-goods-image.png"
+        "value": "utils/coach-profile-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/env-select.png"
+        "value": "utils/coach-work-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/function_deploy.png"
+        "value": "utils/timetable-domain.js",
+        "type": "file"
       },
       {
-        "type": "file",
-        "value": "images/scf-enter.png"
+        "value": "utils/training-domain.js",
+        "type": "file"
+      },
+      {
+        "value": "images/ai_",
+        "type": "prefix"
+      },
+      {
+        "value": "images/create_",
+        "type": "prefix"
+      },
+      {
+        "value": "images/avatar.png",
+        "type": "file"
+      },
+      {
+        "value": "images/cloud_dev.png",
+        "type": "file"
+      },
+      {
+        "value": "images/database.png",
+        "type": "file"
+      },
+      {
+        "value": "images/database_add.png",
+        "type": "file"
+      },
+      {
+        "value": "images/default-goods-image.png",
+        "type": "file"
+      },
+      {
+        "value": "images/env-select.png",
+        "type": "file"
+      },
+      {
+        "value": "images/function_deploy.png",
+        "type": "file"
+      },
+      {
+        "value": "images/scf-enter.png",
+        "type": "file"
       }
     ],
     "include": []
