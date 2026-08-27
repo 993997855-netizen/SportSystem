@@ -1,8 +1,11 @@
 {
   "pages": [
+    "pages/auth/index",
+    "pages/coach-bind/index",
     "pages/index/index",
     "pages/sessions/index",
     "pages/session-detail/index",
+    "pages/session-cancel/index",
     "pages/session-form/index",
     "pages/students/index",
     "pages/classes/index",
