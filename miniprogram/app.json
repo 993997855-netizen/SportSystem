@@ -45,6 +45,7 @@
     "pages/news-form/index",
     "pages/commerce-admin/index",
     "pages/orders/index",
+    "pages/payment-diagnostics/index",
     "pages/notifications/index"
     ,"pages/crm-dashboard/index"
     ,"pages/leads/index"
