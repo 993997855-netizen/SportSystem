@@ -20,7 +20,7 @@
   <view class="card" wx:if="{{context.mode === 'cloud' && (context.needsBinding || context.user.role === 'parent')}}">
     <view class="card-title">使用邀请码</view>
     <view class="muted small desc">教练使用班级邀请码；已有档案的学员可使用管理员提供的绑定码。</view>
-    <input class="input" maxlength="6" type="number" placeholder="请输入6位邀请码" value="{{inviteCode}}" bindinput="inviteInput" />
+    <input class="input" maxlength="6" type="text" confirm-type="done" placeholder="请输入6位邀请码或绑定码" value="{{inviteCode}}" bindinput="inviteInput" />
     <button class="btn-primary bind" disabled="{{binding}}" loading="{{binding}}" bindtap="claimInvite">{{binding ? '正在绑定' : '立即绑定'}}</button>
   </view>
   <view class="card menu">

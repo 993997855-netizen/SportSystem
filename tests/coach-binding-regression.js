@@ -10,8 +10,11 @@ const binding = read("cloudfunctions/clubApi/coach-binding-service.js");
 const coachService = read("cloudfunctions/clubApi/coach-service.js");
 const coachWork = read("cloudfunctions/clubApi/coach-work-service.js");
 const auth = read("miniprogram/pages/auth/index.wxml");
+const authJs = read("miniprogram/pages/auth/index.js");
 const bindJs = read("miniprogram/pages/coach-bind/index.js");
 const bindWxml = read("miniprogram/pages/coach-bind/index.wxml");
+const profileJs = read("miniprogram/pages/profile/index.js");
+const profileWxml = read("miniprogram/pages/profile/index.wxml");
 const team = read("miniprogram/pages/coach-team/index.wxml");
 const form = read("miniprogram/pages/coach-profile-form/index.wxml");
 let checks = 0;
@@ -49,6 +52,9 @@ check(binding.includes("assignedClassIds") && coachWork.includes("plannedCoachAs
 check(!binding.includes('collection("feedback").remove') && !binding.includes('collection("playerAssessments").remove') && !binding.includes('collection("matches").remove'), "growth assessment and league data are unaffected");
 
 check(auth.includes("教练员绑定") && team.includes("已绑定") && team.includes("未绑定") && form.includes("邀请教练绑定"), "binding UI is registered across welcome and admin pages");
+check(!profileWxml.includes('type="number"') && profileJs.includes("toUpperCase()") && profileJs.includes("/pages/coach-bind/index?code="), "profile invite field accepts alphanumeric coach codes");
+check(auth.includes('type="text"') && authJs.includes("/^NL[A-Z0-9]{4}$/") && authJs.includes("/pages/coach-bind/index?code="), "staff invite field routes coach codes to coach binding");
+check(bindJs.includes("options.code") && bindJs.includes("this.preview()"), "coach binding auto-previews a forwarded backup code");
 check(digest("NL8K2P") === digest("NL8K2P") && digest("NL8K2P") !== digest("NL8K2Q"), "credentials are stored as one-way hashes");
-assert.strictEqual(checks, 32);
+assert.strictEqual(checks, 35);
 console.log(`Coach binding regression: ${checks} checks passed`);

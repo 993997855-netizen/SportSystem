@@ -36,10 +36,14 @@ Page({
   logout() {
     wx.showModal({ title: "退出登录", content: "退出只会清理本机登录状态，不会删除账号、孩子或历史业务数据。", success: (result) => { if (result.confirm) api.logout(); } });
   },
-  inviteInput(event) { this.setData({ inviteCode: event.detail.value }); },
+  inviteInput(event) { this.setData({ inviteCode: String(event.detail.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) }); },
   async claimInvite() {
     if (this.data.binding) return;
     if (this.data.inviteCode.length !== 6) { wx.showToast({ title: "请输入6位邀请码", icon: "none" }); return; }
+    if (/^NL[A-Z0-9]{4}$/.test(this.data.inviteCode)) {
+      wx.navigateTo({ url: `/pages/coach-bind/index?code=${this.data.inviteCode}` });
+      return;
+    }
     this.setData({ binding: true });
     try {
       await api.call("claimInvite", { code: this.data.inviteCode });

@@ -49,7 +49,7 @@ Page({
     this.setData({ [`form.${event.currentTarget.dataset.key}`]: event.detail.value });
   },
   staffCode(event) {
-    this.setData({ staffCode: event.detail.value });
+    this.setData({ staffCode: String(event.detail.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) });
   },
   phoneNumber(event) {
     const code = event.detail && event.detail.code;
@@ -92,6 +92,10 @@ Page({
   },
   async claimStaffInvite() {
     if (this.data.loading) return;
+    if (/^NL[A-Z0-9]{4}$/.test(this.data.staffCode)) {
+      wx.navigateTo({ url: `/pages/coach-bind/index?code=${this.data.staffCode}` });
+      return;
+    }
     if (!/^\d{6}$/.test(this.data.staffCode)) return this.setData({ staffMessage: "请输入管理员提供的6位工作人员授权码。" });
     this.setData({ loading: true, staffMessage: "", error: "" });
     try {

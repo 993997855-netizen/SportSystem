@@ -4,7 +4,9 @@ Page({
   data: { code: "", scene: "", loading: false, error: "", preview: null, success: false },
   onLoad(options) {
     const scene = decodeURIComponent(String(options.scene || ""));
+    const code = String(options.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
     if (scene) { this.setData({ scene }); this.preview(); }
+    else if (code) { this.setData({ code }); this.preview(); }
   },
   code(event) { this.setData({ code: String(event.detail.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6), error: "", preview: null }); },
   credential() { return this.data.scene ? { scene: this.data.scene } : { code: this.data.code }; },

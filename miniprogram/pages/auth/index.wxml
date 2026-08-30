@@ -30,7 +30,7 @@
     <view class="staff-state" wx:if="{{loading}}">正在核验当前微信身份...</view>
     <view class="staff-state" wx:else>{{staffMessage}}</view>
     <button class="secondary" wx:if="{{!loading}}" bindtap="staffLogin">重新识别</button>
-    <view class="staff-auth" wx:if="{{!loading && staffMessage}}"><view class="or">已有管理员授权码</view><input type="number" maxlength="6" value="{{staffCode}}" bindinput="staffCode" placeholder="请输入6位授权码"/><button class="primary" bindtap="claimStaffInvite">确认授权并登录</button></view>
+    <view class="staff-auth" wx:if="{{!loading && staffMessage}}"><view class="or">已有工作人员授权码</view><input type="text" maxlength="6" confirm-type="done" value="{{staffCode}}" bindinput="staffCode" placeholder="请输入6位授权码或绑定码"/><button class="primary" bindtap="claimStaffInvite">确认授权并登录</button></view>
     <view class="back" bindtap="back">返回</view>
   </view>
 
