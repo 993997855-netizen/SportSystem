@@ -12,6 +12,7 @@ const { createCrmService } = require("./crm-service");
 const { createTrainingService } = require("./training-service");
 const { createGrowthService } = require("./growth-service");
 const { createLeagueService } = require("./league-service");
+const { createCoachScope } = require("./coach-scope");
 const { ACCOUNT_STATES, accountState, publicAuthUser, assertActiveUser } = require("./auth-policy");
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -31,19 +32,48 @@ const TEST_ROLE_SWITCH_OPENID_HASHES = new Set([
 const COLLECTIONS = ["users", "students", "studentPrivateProfiles", "parentStudentLinks", "childProfileRequests", "classes", "classMembers", "eliteSelections", "sessions", "coachSessionRecords", "matches", "matchSquads", "teams", "teamMembers", "externalPlayers", "leagues", "leagueSeasons", "leagueRounds", "seasonTeams", "leaveRequests", "attendance", "lessonLedger", "lessonEntitlements", "lessonEntitlementEvents", "lessonEntitlementAdjustments", "sessionCancellationCompensations", "coursePackages", "invites", "coachInvites", "auditLogs", "notifications", "news", "courseTypes", "pricingRules", "coupons", "couponRedemptions", "orders", "payments", "paymentTransactionClaims", "paymentSecurityLogs", "coachProfiles", "leads", "leadFollowUps", "trialBookings", "curriculums", "weeklyTrainingPlans", "feedback", "assessmentTemplates", "assessmentRounds", "playerAssessments", "playerGrowthEvents", "playerMatchRecords"];
 const DEDUCTION = { present: 1, absent: 1, leave: 0, sick: 0 };
 let coachBindingService;
+const coachScope = createCoachScope({ db, fetchAll, fetchByIds });
 const coachService = createCoachService({ db, fetchAll, nowText, requireRole, audit, getBindingView: (profile) => coachBindingService.decorateProfile(profile) });
 coachBindingService = createCoachBindingService({ db, fetchAll, nowText, requireRole, audit, findUser, isLegacyPlaceholder, identityHash, createQrCode: createCoachInviteQr });
-const timetableService = createTimetableService({ fetchAll, todayText, requireRole, getCoachReference: coachService.getReference });
-const classService = createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, getCoachReference: coachService.getReference });
+const timetableService = createTimetableService({ fetchAll, todayText, requireRole, getCoachReference: coachService.getReference, coachScope });
+const classService = createClassService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, getCoachReference: coachService.getReference, coachScope });
 const familyService = createFamilyService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit });
 const businessService = createBusinessService({ db, fetchAll, fetchByIds, publicDoc, nowText, requireRole, audit, assertStudentAccess, firstOwnedStudentId });
-const coachWorkService = createCoachWorkService({ db, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, getCoachReference: coachService.getReference, businessService, getActiveClassMembers: classService.activeMembers });
+const coachWorkService = createCoachWorkService({ db, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, getCoachReference: coachService.getReference, businessService, getActiveClassMembers: classService.activeMembers, coachScope });
 const paymentService = createPaymentService({ businessService });
 const crmService = createCrmService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, saveStudent, canManageSession: sessionAccess });
-const trainingService = createTrainingService({ db, fetchAll, publicDoc, nowText, requireRole, audit, assertStudentAccess });
-const growthService = createGrowthService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, assertStudentAccess });
-const leagueService = createLeagueService({ db, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, allowedStudentIds, assertStudentAccess, getCoachReference: coachService.getReference });
+const trainingService = createTrainingService({ db, fetchAll, publicDoc, nowText, requireRole, audit, assertStudentAccess, coachScope });
+const growthService = createGrowthService({ db, command, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, assertStudentAccess, coachScope });
+const leagueService = createLeagueService({ db, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit, allowedStudentIds, assertStudentAccess, getCoachReference: coachService.getReference, coachScope });
 let collectionsReady;
+const COACH_ALLOWED_BUSINESS_ACTIONS = new Set(["listNews", "listNotifications", "markNotificationRead"]);
+const COACH_ADMIN_ONLY_ACTIONS = new Set([
+  "getOperationsDashboard",
+  "createClass", "updateClass", "deleteClass", "saveClass",
+  "searchStudentsForClass", "addClassMember", "removeClassMember", "transferClassMember", "joinClass",
+  "createSession", "updateSession", "deleteSession", "publishSession", "saveSession", "cancelSession", "completeSession",
+  "checkSessionConflicts", "assignSessionCoaches", "enrollSession",
+  "reviewEliteSelection", "promoteToElite",
+]);
+
+function assertCoachServiceBoundary(user, action) {
+  if (!user || user.role !== "coach") return;
+  if (COACH_ADMIN_ONLY_ACTIONS.has(action)) {
+    const error = new Error("教练账号仅可查看本人工作范围，不能执行班级、成员、排课、报名或审核管理操作");
+    error.code = "COACH_MANAGEMENT_FORBIDDEN";
+    throw error;
+  }
+  if (crmService.handles(action)) {
+    const error = new Error("教练账号无权访问俱乐部招生CRM");
+    error.code = "COACH_CRM_FORBIDDEN";
+    throw error;
+  }
+  if (paymentService.handles(action) || businessService.handles(action) && !COACH_ALLOWED_BUSINESS_ACTIONS.has(action)) {
+    const error = new Error("教练账号无权访问俱乐部财务、订单或课时权益数据");
+    error.code = "COACH_FINANCIAL_FORBIDDEN";
+    throw error;
+  }
+}
 
 function nowText() { return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().replace("T", " ").slice(0, 16); }
 function todayText() { return nowText().slice(0, 10); }
@@ -145,20 +175,22 @@ async function audit(user, action, targetType, targetId, detail) {
 async function allowedStudentIds(user) {
   if (user.role === "admin") return null;
   if (user.role === "parent") return (await fetchAll("students", { ownerParentUserId: user._id, status: "active" })).map((item) => item._id);
-  const memberships = await fetchAll("classMembers", { status: "ACTIVE" });
-  return [...new Set(memberships.filter((item) => (user.classIds || []).includes(item.classId)).map((item) => item.studentId))];
+  if (user.role === "coach") return coachScope.allowedStudentIds(user);
+  return [];
 }
-async function assertStudentAccess(user, studentId) { if (user.role === "parent") { const student = (await db.collection("students").doc(studentId).get().catch(() => ({ data: null }))).data; if (!student || student.ownerParentUserId !== user._id) throw new Error("无权访问该学员"); return; } const allowed = await allowedStudentIds(user); if (allowed && !allowed.includes(studentId)) throw new Error("无权访问该学员"); }
+async function assertStudentAccess(user, studentId) { if (user.role === "parent") { const student = (await db.collection("students").doc(studentId).get().catch(() => ({ data: null }))).data; if (!student || student.ownerParentUserId !== user._id) throw new Error("无权访问该学员"); return; } if (user.role === "coach") return coachScope.assertStudentAccess(user, studentId); const allowed = await allowedStudentIds(user); if (allowed && !allowed.includes(studentId)) throw new Error("无权访问该学员"); }
 async function firstOwnedStudentId(user) { const allowed = await allowedStudentIds(user); return allowed && allowed[0] || ""; }
 
 async function listStudents(user) {
   const allowed = await allowedStudentIds(user); if (allowed && !allowed.length) return [];
   const students = allowed === null ? await fetchAll("students", { status: "active" }) : (await fetchByIds("students", allowed)).filter((item) => item.status === "active");
   const [classes, memberships] = await Promise.all([fetchAll("classes"), fetchAll("classMembers", { status: "ACTIVE" })]);
+  const coachClassIds = user.role === "coach" ? new Set(await coachScope.assignedClassIds(user)) : null;
   return students.map((student) => {
-    const classIds = memberships.filter((item) => item.studentId === student._id).map((item) => item.classId);
+    const classIds = memberships.filter((item) => item.studentId === student._id && (!coachClassIds || coachClassIds.has(item.classId))).map((item) => item.classId);
     const ownClasses = classes.filter((item) => classIds.includes(item._id) && item.status !== "INACTIVE");
-    return { ...publicDoc(student), initial: student.name ? student.name[0] : "学", classIds, classNames: ownClasses.map((item) => item.name).join("、"), classes: ownClasses.map((item) => ({ id: item._id, name: item.name, classType: item.classType || "REGULAR", classTypeLabel: item.classType === "ELITE" ? "精英队" : "普通班", schedule: item.schedule || "", venue: item.venue || "", memberStatus: "ACTIVE", memberStatusLabel: "正式成员" })) };
+    const base = user.role === "coach" ? coachScope.coachStudentView(student) : publicDoc(student);
+    return { ...base, initial: student.name ? student.name[0] : "学", classIds, classNames: ownClasses.map((item) => item.name).join("、"), classes: ownClasses.map((item) => ({ id: item._id, name: item.name, classType: item.classType || "REGULAR", classTypeLabel: item.classType === "ELITE" ? "精英队" : "普通班", schedule: item.schedule || "", venue: item.venue || "", memberStatus: "ACTIVE", memberStatusLabel: "正式成员" })) };
   });
 }
 async function ensureClassCode(clubClass) {
@@ -173,14 +205,14 @@ async function ensureClassCode(clubClass) {
 async function listClasses(user, input = {}) {
   let classes;
   if (user.role === "admin") classes = await fetchAll("classes", { status: "ACTIVE" });
-  else if (user.role === "coach") classes = (await fetchByIds("classes", user.classIds || [])).filter((item) => item.status !== "INACTIVE");
+  else if (user.role === "coach") classes = await coachScope.assignedClasses(user);
   else classes = await fetchAll("classes", { status: "ACTIVE" });
   for (const item of classes) await ensureClassCode(item);
   const keyword = String(input.keyword || "").trim().toLowerCase();
-  const coachId = String(input.coachId || "");
+  const coachId = user.role === "coach" ? "" : String(input.coachId || "");
   if (keyword) classes = classes.filter((item) => `${item.classCode || ""}${item.name || ""}${item.headCoachName || item.coachName || ""}`.toLowerCase().includes(keyword));
   if (coachId) classes = classes.filter((item) => (item.headCoachUserId || item.coachUserId) === coachId);
-  const rows = []; for (const item of classes) rows.push(await classService.decorateClass(item)); return rows;
+  const rows = []; for (const item of classes) { const decorated = await classService.decorateClass(item); rows.push(user.role === "coach" ? coachScope.coachClassView(decorated) : decorated); } return rows;
 }
 async function listClassCoaches(user) {
   requireRole(user, ["admin", "coach"]);
@@ -194,15 +226,17 @@ async function listClassCoaches(user) {
 }
 async function getStudent(user, id) {
   await assertStudentAccess(user, id); const student = (await db.collection("students").doc(id).get()).data;
-  const memberships = await classService.studentMemberships(id);
+  const scope = user.role === "coach" ? await coachScope.scopedStudentClasses(user, id) : null;
+  const memberships = scope ? scope.memberships : await classService.studentMemberships(id);
   const [classes, attendance, ledger, entitlements] = await Promise.all([
-    fetchByIds("classes", memberships.map((item) => item.classId)),
+    scope ? Promise.resolve(scope.classes) : fetchByIds("classes", memberships.map((item) => item.classId)),
     db.collection("attendance").where({ studentId: id }).orderBy("date", "desc").limit(50).get(),
     user.role === "coach" ? Promise.resolve({ data: [] }) : db.collection("lessonLedger").where({ studentId: id }).orderBy("createdAt", "desc").limit(100).get(),
     user.role === "coach" ? Promise.resolve([]) : businessService.call("listLessonEntitlements", { studentId: id }, user)
   ]);
   const decoratedClasses = []; for (const item of classes) decoratedClasses.push(await classService.decorateClass(item));
   let recruitment = null;
+  if (user.role === "coach") return { ...coachScope.coachStudentView(student), classIds: memberships.map((item) => item.classId), classes: decoratedClasses, memberships: memberships.map(publicDoc), attendance: attendance.data.filter((item) => memberships.some((member) => member.classId === item.classId)).map(publicDoc), lessonLedger: [], lessonEntitlements: [], recruitment: null };
   const leadResult = student.crmLeadId ? await db.collection("leads").doc(student.crmLeadId).get().catch(() => ({ data: null })) : await db.collection("leads").where({ convertedStudentId: id }).limit(1).get();
   const lead = student.crmLeadId ? leadResult.data : (leadResult.data || [])[0];
   if (lead) { const trial = (await db.collection("trialBookings").where({ leadId: lead._id }).orderBy("trialDate", "desc").limit(1).get()).data[0]; recruitment = { source: lead.source || "", ownerCoachName: lead.ownerCoachName || "", firstContactAt: lead.createdAt || "", trialDate: (trial || {}).trialDate || "", trialCoachName: (trial || {}).coachName || "", trialFeedback: ((trial || {}).feedback || {}).summary || "", convertedAt: lead.convertedAt || "" }; }
@@ -223,13 +257,13 @@ async function getClass(user, id) {
   requireRole(user, ["admin", "coach"]);
   const clubClass = (await db.collection("classes").doc(id).get()).data;
   if (!clubClass) throw new Error("班级不存在");
-  if (user.role === "coach" && clubClass.headCoachUserId !== user._id && !(user.classIds || []).includes(id)) throw new Error("无权编辑该班级");
-  return classService.decorateClass(clubClass);
+  if (user.role === "coach") await coachScope.assertClassAccess(user, id);
+  const decorated = await classService.decorateClass(clubClass);
+  return user.role === "coach" ? coachScope.coachClassView(decorated) : decorated;
 }
 async function saveClass(user, payload) {
-  requireRole(user, ["admin", "coach"]); const previous = payload.id ? (await db.collection("classes").doc(payload.id).get()).data : null;
-  if (user.role === "coach" && previous && previous.headCoachUserId !== user._id && !(user.classIds || []).includes(previous._id)) throw new Error("无权编辑该班级");
-  const headCoachUserId = user.role === "coach" ? user._id : String(payload.headCoachUserId || "");
+  requireRole(user, ["admin"]); const previous = payload.id ? (await db.collection("classes").doc(payload.id).get()).data : null;
+  const headCoachUserId = String(payload.headCoachUserId || "");
   if (user.role === "admin" && !headCoachUserId) throw new Error("请先在教练管理创建教练档案，再选择主教练");
   const headCoach = headCoachUserId ? (await db.collection("users").doc(headCoachUserId).get().catch(() => ({ data: null }))).data : null;
   const headCoachProfile = headCoachUserId ? (await db.collection("coachProfiles").where({ coachUserId: headCoachUserId }).limit(1).get()).data[0] : null;
@@ -241,7 +275,7 @@ async function saveClass(user, payload) {
   const classCode = previous && previous.classCode || String(payload.classCode || "").trim().toUpperCase() || `NL${String(Math.floor(100000 + Math.random() * 900000))}`;
   const duplicateCode = await db.collection("classes").where({ classCode }).limit(10).get();
   if (duplicateCode.data.some((item) => item._id !== payload.id)) throw new Error("班级号已存在，请重新保存");
-  const assistantCoachIds = user.role === "admin" ? [...new Set((payload.assistantCoachIds || []).filter((id) => id && id !== headCoachUserId))] : (previous || {}).assistantCoachIds || [];
+  const assistantCoachIds = [...new Set((payload.assistantCoachIds || []).filter((id) => id && id !== headCoachUserId))];
   const assistantUsers = await fetchByIds("users", assistantCoachIds);
   const assistantProfiles = (await fetchAll("coachProfiles")).filter((item) => assistantCoachIds.includes(item.coachUserId) && item.active !== false);
   const assistantById = new Map([...assistantProfiles.map((item) => [item.coachUserId, item]), ...assistantUsers.map((item) => [item.coachId || item._id, item])]);
@@ -260,11 +294,11 @@ async function saveClass(user, payload) {
   await audit(user, previous ? "updateClass" : "createClass", "class", id, { operator: user._id, classId: id, fromType: previous ? previous.classType || "REGULAR" : "", toType: data.classType, reason: previous && previous.classType !== data.classType ? "班级类型调整" : data.name }); return { id };
 }
 
-async function sessionAccess(user, session) { if (user.role === "coach" && !coachWorkService.effective(session).some((item) => item.coachId === user._id)) throw new Error("无权管理该课程"); }
-async function decorateSession(session, studentId, internal = true) {
+async function sessionAccess(user, session) { if (user.role === "coach") await coachScope.assertSessionAccess(user, session); }
+async function decorateSession(session, studentId, internal = true, viewerRole = "admin") {
   const [members, trialCount, leaveRows, classResult, attendanceRows] = await Promise.all([
     classService.activeMembers(session.classId),
-    crmService.trialCount(session._id),
+    viewerRole === "coach" ? Promise.resolve(0) : crmService.trialCount(session._id),
     studentId ? db.collection("leaveRequests").where({ sessionId: session._id, studentId }).limit(100).get() : Promise.resolve({ data: [] }),
     db.collection("classes").doc(session.classId).get().catch(() => ({ data: null })),
     db.collection("attendance").where({ sessionId: session._id }).limit(100).get()
@@ -280,7 +314,7 @@ async function decorateSession(session, studentId, internal = true) {
   return { ...sessionView, ...workView, coach: await coachService.getReference(primaryAssignment.coachId || session.coachUserId || clubClass.headCoachUserId || clubClass.coachUserId, primaryAssignment.coachId ? "" : session.coachName || clubClass.headCoachName), className: clubClass.name || session.title || "", ageGroup: clubClass.ageGroup || "", standardCapacity, classType: clubClass.classType || "REGULAR", classTypeLabel: clubClass.classType === "ELITE" ? "精英队" : "普通班", memberCount: expected, enrolledCount: expected, trialCount, totalCount, overCapacity: Math.max(0, expected - standardCapacity), isFull: totalCount >= Number(session.capacity || standardCapacity), attendanceStats, checkinOpen: session.checkinStatus === "OPEN" && Number(session.checkinExpiresAt || 0) > Date.now(), myStatus: leaveStatus || (memberIds.has(studentId) ? "booked" : "none"), leaveRequestId: leave ? leave._id : "" };
 }
 async function listSessions(user, input) {
-  let sessions = await fetchAll("sessions"); if (user.role === "parent") sessions = sessions.filter((item) => ["published", "COMPLETED", "CANCELLED"].includes(item.status)); if (user.role === "coach") sessions = sessions.filter((item) => coachWorkService.effective(item).some((row) => row.coachId === user._id));
+  let sessions = await fetchAll("sessions"); if (user.role === "parent") sessions = sessions.filter((item) => ["published", "COMPLETED", "CANCELLED"].includes(item.status)); if (user.role === "coach") { const coachId = coachScope.coachPrincipalId(user); sessions = sessions.filter((item) => coachWorkService.effective(item).some((row) => row.coachId === coachId)); }
   const studentId = input.studentId || (user.role === "parent" ? await firstOwnedStudentId(user) : "");
   if (user.role === "parent") {
     if (!studentId) return [];
@@ -288,16 +322,16 @@ async function listSessions(user, input) {
     const classIds = new Set((await classService.studentMemberships(studentId)).map((item) => item.classId));
     sessions = sessions.filter((item) => classIds.has(item.classId));
   }
-  const rows = []; for (const session of sessions.sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))) rows.push(await decorateSession(session, studentId, user.role !== "parent")); return rows;
+  const rows = []; for (const session of sessions.sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))) rows.push(await decorateSession(session, studentId, user.role !== "parent", user.role)); return rows;
 }
 async function getSession(user, id, studentId) {
   const session = (await db.collection("sessions").doc(validId(id)).get()).data; if (!session) throw new Error("课程不存在"); if (user.role === "parent" && !["published", "COMPLETED", "CANCELLED"].includes(session.status)) throw new Error("课程尚未发布"); await sessionAccess(user, session);
   const selectedStudentId = studentId || (user.role === "parent" ? await firstOwnedStudentId(user) : "");
   if (user.role === "parent") { await assertStudentAccess(user, selectedStudentId); const membership = await db.collection("classMembers").where({ classId: session.classId, studentId: selectedStudentId, status: "ACTIVE" }).limit(1).get(); if (!membership.data.length) throw new Error("该学员不是本课程班级成员"); }
-  const decorated = await decorateSession(session, selectedStudentId, user.role !== "parent"); if (user.role === "parent") return decorated;
+  const decorated = await decorateSession(session, selectedStudentId, user.role !== "parent", user.role); if (user.role === "parent") return decorated;
   const [members, attendance] = await Promise.all([classService.activeMembers(session.classId), db.collection("attendance").where({ sessionId: id }).limit(100).get()]);
   const students = await fetchByIds("students", members.map((item) => item.studentId));
-  return { ...decorated, enrollments: members.map((item) => ({ id: `${id}-${item.studentId}`, sessionId: id, studentId: item.studentId, attendanceStatus: (attendance.data.find((record) => record.studentId === item.studentId) || {}).status || "unmarked", student: publicDoc(students.find((s) => s._id === item.studentId)) })), trialStudents: await crmService.trialStudents(id) };
+  return { ...decorated, enrollments: members.map((item) => ({ id: `${id}-${item.studentId}`, sessionId: id, studentId: item.studentId, attendanceStatus: (attendance.data.find((record) => record.studentId === item.studentId) || {}).status || "unmarked", student: user.role === "coach" ? coachScope.coachStudentView(students.find((s) => s._id === item.studentId)) : publicDoc(students.find((s) => s._id === item.studentId)) })), trialStudents: user.role === "coach" ? [] : await crmService.trialStudents(id) };
 }
 async function saveSession(user, payload) {
   if (payload.id) { const historical = (await db.collection("sessions").doc(payload.id).get().catch(() => ({ data: null }))).data; if (historical && historical.status === "COMPLETED") throw new Error("已完成课程只能通过课时更正流程修改教练"); }
@@ -324,8 +358,8 @@ async function cancelLeave(user, input) {
   if (!result.idempotent) await audit(user, "cancelLeave", "leave", requestId, { studentId: request.studentId, sessionId: request.sessionId, leaveRequestId: requestId, operator: user._id, oldStatus: "pending", newStatus: "cancelled", lessonDelta: 0 }); return { ok: true, ...result };
 }
 async function listLeaveRequests(user, input = {}) {
-  let rows = await fetchAll("leaveRequests"); if (user.role === "parent") { if (input.studentId) await assertStudentAccess(user, input.studentId); const owned = new Set(await allowedStudentIds(user)); rows = rows.filter((item) => owned.has(item.studentId) && (!input.studentId || item.studentId === input.studentId)); } if (user.role === "coach") { const sessions = await fetchByIds("sessions", rows.map((item) => item.sessionId)); const allowed = new Set(sessions.filter((item) => (user.classIds || []).includes(item.classId)).map((item) => item._id)); rows = rows.filter((item) => allowed.has(item.sessionId)); }
-  const [students, sessions] = await Promise.all([fetchByIds("students", rows.map((item) => item.studentId)), fetchByIds("sessions", rows.map((item) => item.sessionId))]); const classes = await fetchByIds("classes", sessions.map((item) => item.classId)); return rows.sort((a, b) => String(b.submittedAt || b.createdAt).localeCompare(String(a.submittedAt || a.createdAt))).map((item) => { const session = sessions.find((s) => s._id === item.sessionId); return { ...publicDoc(item), submittedAt: item.submittedAt || item.createdAt, student: publicDoc(students.find((s) => s._id === item.studentId)), session: publicDoc(session), clubClass: publicDoc(classes.find((clubClass) => clubClass._id === (item.classId || (session || {}).classId))) }; });
+  let rows = await fetchAll("leaveRequests"); if (user.role === "parent") { if (input.studentId) await assertStudentAccess(user, input.studentId); const owned = new Set(await allowedStudentIds(user)); rows = rows.filter((item) => owned.has(item.studentId) && (!input.studentId || item.studentId === input.studentId)); } if (user.role === "coach") { const sessions = await fetchByIds("sessions", rows.map((item) => item.sessionId)); const allowed = new Set(); for (const item of sessions) { try { await coachScope.assertSessionAccess(user, item); allowed.add(item._id); } catch (error) { if (error.code !== "COACH_SESSION_SCOPE_FORBIDDEN") throw error; } } rows = rows.filter((item) => allowed.has(item.sessionId)); }
+  const [students, sessions] = await Promise.all([fetchByIds("students", rows.map((item) => item.studentId)), fetchByIds("sessions", rows.map((item) => item.sessionId))]); const classes = await fetchByIds("classes", sessions.map((item) => item.classId)); return rows.sort((a, b) => String(b.submittedAt || b.createdAt).localeCompare(String(a.submittedAt || a.createdAt))).map((item) => { const session = sessions.find((s) => s._id === item.sessionId); const student = students.find((s) => s._id === item.studentId); return { ...publicDoc(item), submittedAt: item.submittedAt || item.createdAt, student: user.role === "coach" ? coachScope.coachStudentView(student) : publicDoc(student), session: publicDoc(session), clubClass: publicDoc(classes.find((clubClass) => clubClass._id === (item.classId || (session || {}).classId))) }; });
 }
 async function attendanceChangeInTransaction(transaction, user, session, studentId, status, context = {}) {
   if (!(status in DEDUCTION)) throw new Error("无效出勤状态");
@@ -347,8 +381,8 @@ async function reviewLeave(user, input) {
 
 async function getAttendanceSheet(user, input) {
   requireRole(user, ["admin", "coach"]); const session = (await db.collection("sessions").doc(validId(input.sessionId)).get()).data; await sessionAccess(user, session);
-  const [members, records, approvedLeaves, trialStudents] = await Promise.all([classService.activeMembers(session.classId), db.collection("attendance").where({ sessionId: input.sessionId }).limit(100).get(), db.collection("leaveRequests").where({ sessionId: input.sessionId, status: "approved" }).limit(100).get(), crmService.trialStudents(input.sessionId)]); const students = await fetchByIds("students", members.map((item) => item.studentId));
-  return { session: publicDoc(session), date: session.date, students: students.map((student) => { const record = records.data.find((item) => item.studentId === student._id); const approvedLeave = approvedLeaves.data.find((item) => item.studentId === student._id); const attendanceStatus = record ? record.status : "unmarked"; return { ...publicDoc(student), initial: student.name ? student.name[0] : "学", attendanceStatus, leaveApproved: Boolean(approvedLeave), leaveRequestId: approvedLeave ? approvedLeave._id : "", leaveLocked: Boolean(approvedLeave && attendanceStatus === "leave"), leaveOverride: Boolean(approvedLeave && attendanceStatus !== "leave") }; }), trialStudents };
+  const [members, records, approvedLeaves, trialStudents] = await Promise.all([classService.activeMembers(session.classId), db.collection("attendance").where({ sessionId: input.sessionId }).limit(100).get(), db.collection("leaveRequests").where({ sessionId: input.sessionId, status: "approved" }).limit(100).get(), user.role === "coach" ? Promise.resolve([]) : crmService.trialStudents(input.sessionId)]); const students = await fetchByIds("students", members.map((item) => item.studentId));
+  return { session: publicDoc(session), date: session.date, students: students.map((student) => { const record = records.data.find((item) => item.studentId === student._id); const approvedLeave = approvedLeaves.data.find((item) => item.studentId === student._id); const attendanceStatus = record ? record.status : "unmarked"; return { ...(user.role === "coach" ? coachScope.coachStudentView(student) : publicDoc(student)), initial: student.name ? student.name[0] : "学", attendanceStatus, leaveApproved: Boolean(approvedLeave), leaveRequestId: approvedLeave ? approvedLeave._id : "", leaveLocked: Boolean(approvedLeave && attendanceStatus === "leave"), leaveOverride: Boolean(approvedLeave && attendanceStatus !== "leave") }; }), trialStudents };
 }
 async function submitAttendance(user, input) {
   requireRole(user, ["admin", "coach"]); const session = (await db.collection("sessions").doc(validId(input.sessionId)).get()).data; await sessionAccess(user, session); if (session.status === "CANCELLED") throw new Error("已取消课程不能点名或消课"); const members = await classService.activeMembers(session.classId); const allowed = new Set(members.map((item) => item.studentId));
@@ -359,7 +393,7 @@ async function submitAttendance(user, input) {
     if (change.approvedLeaveId && record.status !== "leave") overrides.push({ studentId: record.studentId, leaveRequestId: change.approvedLeaveId, ...change.correction });
   }
   for (const change of overrides) await audit(user, "overrideApprovedLeaveAttendance", "attendance", change.studentId, { studentId: change.studentId, sessionId: input.sessionId, leaveRequestId: change.leaveRequestId, operator: user._id, oldStatus: change.oldStatus, newStatus: change.newStatus, lessonDelta: change.lessonDelta });
-  await crmService.applyTrialAttendance(user, input.sessionId, input.trialRecords || []);
+  if (user.role === "admin") await crmService.applyTrialAttendance(user, input.sessionId, input.trialRecords || []);
   for (const record of input.records || []) if (record.status === "absent") { const student = (await db.collection("students").doc(record.studentId).get()).data; await businessService.notify((student || {}).ownerParentUserId, "ABSENCE", "缺课通知", `${session.title}已记录为缺勤`, { sessionId: input.sessionId, studentId: record.studentId }); }
   await audit(user, "submitAttendance", "session", input.sessionId, `${(input.records || []).length}人`); return { ok: true };
 }
@@ -383,7 +417,7 @@ async function selfCheckin(user, input) {
   const member = await db.collection("classMembers").where({ classId: session.classId, studentId, status: "ACTIVE" }).limit(1).get(); if (!member.data.length) throw new Error("该学员不是本班成员"); const latitude = Number(input.latitude); const longitude = Number(input.longitude); if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) throw new Error("无法获取签到位置"); const distance = locationDistance(latitude, longitude, session.checkinLatitude, session.checkinLongitude); if (distance > Number(session.checkinRadius || 300)) throw new Error(`距离签到地点约${Math.round(distance)}米，超出范围`);
   const result = await db.runTransaction((transaction) => attendanceChangeInTransaction(transaction, user, session, studentId, "present", { source: "SELF_CHECKIN", note: `${session.title}定位签到` })); await audit(user, "SELF_CHECKIN", "session", session._id, { studentId, distance: Math.round(distance), lessonDelta: result.lessonDelta }); return { ok: true, distance: Math.round(distance), attendanceStatus: "present" };
 }
-async function getLessonLedger(user, studentId) { await assertStudentAccess(user, studentId); return (await db.collection("lessonLedger").where({ studentId }).orderBy("createdAt", "desc").limit(100).get()).data.map(publicDoc); }
+async function getLessonLedger(user, studentId) { if (user.role === "coach") throw new Error("教练无权查看学员课时账本"); await assertStudentAccess(user, studentId); return (await db.collection("lessonLedger").where({ studentId }).orderBy("createdAt", "desc").limit(100).get()).data.map(publicDoc); }
 async function createInvite(user, input) { requireRole(user, ["admin"]); if (input.role === "coach") throw new Error("教练账号必须从教练管理生成档案专属绑定邀请"); if (!["admin", "parent"].includes(input.role)) throw new Error("邀请角色无效"); if (input.role === "parent") { const student = (await db.collection("students").doc(validId(input.studentId)).get()).data; if (!student) throw new Error("学员不存在"); if (student.ownerParentUserId) throw new Error("该学员已有学员端账号归属；如需更换，请使用归属转移。"); } const code = String(Math.floor(100000 + Math.random() * 900000)); const expiresAt = Date.now() + 24 * 60 * 60 * 1000; await db.collection("invites").add({ data: { code, role: input.role, studentId: input.studentId || "", classId: "", displayName: String(input.displayName || ""), status: "active", expiresAt, createdAt: nowText(), creatorId: user._id } }); await audit(user, "CREATE_ROLE_INVITE", "invite", code, { role: input.role, classId: "" }); return { code, expiresAt }; }
 async function claimStaffInvite(openid, code) {
   const found = await db.collection("invites").where({ code: String(code || "").trim(), status: "active" }).limit(1).get();
@@ -422,10 +456,12 @@ async function claimInvite(user, code) {
 async function getDashboard(user, input = {}) {
   let students = await listStudents(user); if (user.role === "parent" && input.activeStudentId) { await assertStudentAccess(user, input.activeStudentId); students = students.filter((item) => item.id === input.activeStudentId); } const selectedId = user.role === "parent" ? (students[0] || {}).id : ""; const [classes, sessions, leaves] = await Promise.all([listClasses(user), listSessions(user, { studentId: selectedId }), listLeaveRequests(user, { studentId: selectedId })]); const studentIds = students.map((item) => item.id); let todayAttendance = 0;
   if (studentIds.length) { const batches = []; for (let i = 0; i < studentIds.length; i += 100) batches.push(db.collection("attendance").where({ date: todayText(), studentId: command.in(studentIds.slice(i, i + 100)) }).count()); todayAttendance = (await Promise.all(batches)).reduce((sum, item) => sum + item.total, 0); }
-  return { role: user.role, studentCount: students.length, classCount: classes.length, lowBalance: students.filter((item) => Number(item.remainingLessons) <= 5).length, todayAttendance, pendingLeaves: leaves.filter((item) => item.status === "pending").length, recentStudents: [...students].sort((a, b) => Number(a.remainingLessons) - Number(b.remainingLessons)).slice(0, 3), classes, sessions: sessions.slice(0, 4) };
+  const lowBalance = user.role === "coach" ? 0 : students.filter((item) => Number(item.remainingLessons) <= 5).length;
+  const recentStudents = user.role === "coach" ? students.slice(0, 3) : [...students].sort((a, b) => Number(a.remainingLessons) - Number(b.remainingLessons)).slice(0, 3);
+  return { role: user.role, studentCount: students.length, classCount: classes.length, lowBalance, todayAttendance, pendingLeaves: leaves.filter((item) => item.status === "pending").length, recentStudents, classes, sessions: sessions.slice(0, 4) };
 }
 async function getOperationsDashboard(user) {
-  requireRole(user, ["admin", "coach"]); const [dashboard, leaves, logs, commerce] = await Promise.all([getDashboard(user), listLeaveRequests(user), db.collection("auditLogs").orderBy("createdAt", "desc").limit(30).get(), businessService.metrics()]); return { role: user.role, metrics: { students: dashboard.studentCount, sessions: dashboard.sessions.length, classMembers: dashboard.classes.reduce((sum, item) => sum + item.studentCount, 0), pendingLeaves: leaves.filter((item) => item.status === "pending").length, paidOrders: commerce.paidOrders, pendingOrders: commerce.pendingOrders, revenueYuan: (commerce.revenueCents / 100).toFixed(2), attendanceRate: commerce.attendanceRate }, alerts: dashboard.lowBalance ? [{ level: "danger", text: `${dashboard.lowBalance}名学员课时不足5节` }] : [], sessions: dashboard.sessions, auditLogs: logs.data.map(publicDoc) };
+  requireRole(user, ["admin"]); const [dashboard, leaves, logs, commerce] = await Promise.all([getDashboard(user), listLeaveRequests(user), db.collection("auditLogs").orderBy("createdAt", "desc").limit(30).get(), businessService.metrics()]); return { role: user.role, metrics: { students: dashboard.studentCount, sessions: dashboard.sessions.length, classMembers: dashboard.classes.reduce((sum, item) => sum + item.studentCount, 0), pendingLeaves: leaves.filter((item) => item.status === "pending").length, paidOrders: commerce.paidOrders, pendingOrders: commerce.pendingOrders, revenueYuan: (commerce.revenueCents / 100).toFixed(2), attendanceRate: commerce.attendanceRate }, alerts: dashboard.lowBalance ? [{ level: "danger", text: `${dashboard.lowBalance}名学员课时不足5节` }] : [], sessions: dashboard.sessions, auditLogs: logs.data.map(publicDoc) };
 }
 
 exports.main = async (event) => {
@@ -463,6 +499,7 @@ exports.main = async (event) => {
     }
     assertActiveUser(user);
     await coachBindingService.assertCoachAccess(user, { allowTestRole: canSwitchTestRole(openid) });
+    assertCoachServiceBoundary(user, event.action);
     await familyService.ensureMigration(user);
     if (classService.handles(event.action)) data = await classService.call(event.action, input, user);
     else if (familyService.handles(event.action)) data = await familyService.call(event.action, input, user);
@@ -477,7 +514,7 @@ exports.main = async (event) => {
     else if (growthService.handles(event.action)) data = await growthService.call(event.action, input, user);
     else if (leagueService.handles(event.action)) data = await leagueService.call(event.action, input, user);
     else switch (event.action) {
-      case "getContext": { const owned = user.role === "parent" ? await allowedStudentIds(user) : []; data = { mode: "cloud", accountState: ACCOUNT_STATES.ACTIVE, user: publicAuthUser(user), needsProfile: user.role === "parent" && !owned.length, needsBinding: user.role === "coach" && !(user.classIds || []).length, canSwitchTestRole: canSwitchTestRole(openid) }; break; }
+      case "getContext": { const owned = user.role === "parent" ? await allowedStudentIds(user) : []; const coachClassIds = user.role === "coach" ? await coachScope.assignedClassIds(user) : []; data = { mode: "cloud", accountState: ACCOUNT_STATES.ACTIVE, user: publicAuthUser(user), needsProfile: user.role === "parent" && !owned.length, needsBinding: user.role === "coach" && !coachClassIds.length, canSwitchTestRole: canSwitchTestRole(openid) }; break; }
       case "switchTestRole": {
         if (!canSwitchTestRole(cloud.getWXContext().OPENID)) throw new Error("当前账号未获准切换测试角色");
         const role = String(input.role || "");

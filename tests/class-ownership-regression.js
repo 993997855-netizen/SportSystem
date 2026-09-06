@@ -37,7 +37,10 @@ async function run() {
   let checks = 0;
   await admin("resetDemo");
 
-  const elite = await coach("saveClass", { clubClass: payload({ name: "教练自建精英班", classType: "ELITE", scheduleSlots: [{ weekday: "周二", startTime: "18:30", endTime: "20:00" }, { weekday: "周六", startTime: "09:00", endTime: "10:30" }] }) });
+  await rejects(() => coach("saveClass", { clubClass: payload({ name: "教练不得自建班级", classType: "ELITE", scheduleSlots: [{ weekday: "周二", startTime: "18:30", endTime: "20:00" }] }) }), /权限/);
+  checks += 1;
+
+  const elite = await admin("saveClass", { clubClass: payload({ name: "管理员创建精英班", classType: "ELITE", headCoachUserId: "coach1", scheduleSlots: [{ weekday: "周二", startTime: "18:30", endTime: "20:00" }, { weekday: "周六", startTime: "09:00", endTime: "10:30" }] }) });
   const eliteClass = await coach("getClass", { id: elite.id });
   assert.strictEqual(eliteClass.classType, "ELITE");
   assert.strictEqual(eliteClass.headCoachUserId, "coach1");
@@ -45,6 +48,8 @@ async function run() {
   assert.strictEqual(eliteClass.schedule, "周二 18:30-20:00 / 周六 09:00-10:30");
   assert.strictEqual(eliteClass.scheduleSlots.length, 2);
   checks += 5;
+  await rejects(() => coach("saveClass", { clubClass: payload({ id: elite.id, name: "教练不得编辑自己的班级", headCoachUserId: "coach1" }) }), /权限/);
+  checks += 1;
 
   storage.nanlianClubV2.users.push({ id: "coach2", role: "coach", name: "王教练", classIds: [], studentIds: [] });
   const coaches = await admin("listClassCoaches");
@@ -59,17 +64,16 @@ async function run() {
   checks += 3;
 
   await rejects(() => coach("getClass", { id: regular.id }), /无权/);
-  await rejects(() => coach("saveClass", { clubClass: payload({ id: regular.id, name: "越权编辑" }) }), /无权/);
   await rejects(() => parent("saveClass", { clubClass: payload() }), /权限/);
-  checks += 3;
+  checks += 2;
 
   await admin("saveClass", { clubClass: payload({ id: regular.id, name: "重新分配班级", headCoachUserId: "coach1" }) });
   assert(storage.nanlianClubV2.users.find((item) => item.id === "coach1").classIds.includes(regular.id));
   assert(!storage.nanlianClubV2.users.find((item) => item.id === "coach2").classIds.includes(regular.id));
   checks += 2;
 
-  assert.strictEqual(checks, 14);
-  console.log("Class ownership regression: 14 checks passed");
+  assert.strictEqual(checks, 15);
+  console.log("Class ownership regression: 15 checks passed");
 }
 
 run().catch((error) => { console.error(error); process.exitCode = 1; });

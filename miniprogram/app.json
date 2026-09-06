@@ -39,6 +39,7 @@
     "pages/league-match-form/index",
     "pages/attendance/index",
     "pages/leave-requests/index",
+    "pages/child-profile-requests/index",
     "pages/operations/index",
     "pages/account-management/index",
     "pages/news/index",

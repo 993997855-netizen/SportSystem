@@ -50,8 +50,9 @@ function pairs(ids) {
 
 function createLeagueService({
   db, fetchAll, fetchByIds, publicDoc, nowText, todayText, requireRole, audit,
-  allowedStudentIds, assertStudentAccess, getCoachReference
+  allowedStudentIds, assertStudentAccess, getCoachReference, coachScope
 }) {
+  function principal(user) { return coachScope ? coachScope.coachPrincipalId(user) : String(user.coachId || user._id || ""); }
   async function ensureDefaults() {
     const found = await db.collection("leagues").where({ leagueType: "GROWTH_LEAGUE" }).limit(1).get();
     if (found.data.length) return;
@@ -77,7 +78,7 @@ function createLeagueService({
     if (!team) return {};
     const value = publicDoc(team);
     if (team.coachUserId && getCoachReference) value.coach = await getCoachReference(team.coachUserId, team.coachName);
-    if (user.role === "parent") {
+    if (user.role !== "admin") {
       delete value.contactMobile;
       delete value.coachMobile;
       delete value.contactName;
@@ -140,13 +141,18 @@ function createLeagueService({
       const rounds = (await fetchAll("leagueRounds", { seasonId: season._id })).sort((a, b) => a.date.localeCompare(b.date));
       const nextRound = rounds.find((item) => item.status !== "CANCELLED" && item.date >= (input.today || todayText())) || rounds[0];
       const registrations = await fetchAll("seasonTeams", { seasonId: season._id, status: "ACTIVE" });
-      const rawTeams = await fetchByIds("teams", registrations.map((item) => item.teamId));
+      let rawTeams = await fetchByIds("teams", registrations.map((item) => item.teamId));
       let rawMatches = nextRound ? await fetchAll("matches", { roundId: nextRound._id }) : [];
       if (user.role === "parent") {
         const owned = await parentStudentSet(user, input);
         const squads = await fetchAll("matchSquads", { memberType: "INTERNAL_STUDENT" });
         const allowedMatches = new Set(squads.filter((item) => owned.has(item.studentId)).map((item) => item.matchId));
         rawMatches = rawMatches.filter((item) => allowedMatches.has(item._id));
+      } else if (user.role === "coach") {
+        const ownTeamIds = new Set(rawTeams.filter((item) => item.coachUserId === principal(user)).map((item) => item._id));
+        rawMatches = rawMatches.filter((item) => ownTeamIds.has(item.homeTeamId) || ownTeamIds.has(item.awayTeamId));
+        const visibleTeamIds = new Set(rawMatches.flatMap((item) => [item.homeTeamId, item.awayTeamId]));
+        rawTeams = rawTeams.filter((item) => visibleTeamIds.has(item._id));
       }
       const teams = [];
       for (const team of rawTeams) teams.push(await teamView(team._id, user));
@@ -158,7 +164,7 @@ function createLeagueService({
         league: publicDoc(league),
         season: publicDoc(season),
         nextRound: publicDoc(nextRound),
-        rounds: rounds.map(publicDoc),
+        rounds: user.role === "coach" ? (rawMatches.length && nextRound ? [publicDoc(nextRound)] : []) : rounds.map(publicDoc),
         teams,
         matches,
         standings: await calculateStandings(season._id),
@@ -245,7 +251,8 @@ function createLeagueService({
       const team = (await db.collection("teams").doc(input.teamId).get()).data;
       const student = (await db.collection("students").doc(input.studentId).get()).data;
       if (!team || team.organizationType !== "INTERNAL" || !student || student.status !== "active") throw new Error("内部球队成员信息无效");
-      if (user.role === "coach" && team.coachUserId !== user._id) throw new Error("只能管理自己负责的球队");
+      if (user.role === "coach" && team.coachUserId !== principal(user)) throw new Error("只能管理自己负责的球队");
+      if (user.role === "coach") await coachScope.assertStudentAccess(user, student._id);
       const duplicate = (await db.collection("teamMembers").where({ teamId: team._id, studentId: student._id, status: "ACTIVE" }).limit(1).get()).data[0];
       if (duplicate) return { id: duplicate._id, duplicate: true };
       const added = await db.collection("teamMembers").add({ data: { teamId: team._id, studentId: student._id, memberType: "INTERNAL_STUDENT", jerseyNumber: input.jerseyNumber || "", status: "ACTIVE", createdAt: nowText() } });
@@ -308,10 +315,19 @@ function createLeagueService({
         const squads = await fetchAll("matchSquads", { memberType: "INTERNAL_STUDENT" });
         const allowedMatches = new Set(squads.filter((item) => owned.has(item.studentId)).map((item) => item.matchId));
         matches = matches.filter((item) => allowedMatches.has(item._id));
+      } else if (user.role === "coach") {
+        const ownTeamIds = new Set((await fetchAll("teams")).filter((item) => item.coachUserId === principal(user)).map((item) => item._id));
+        matches = matches.filter((item) => ownTeamIds.has(item.homeTeamId) || ownTeamIds.has(item.awayTeamId));
       }
       const result = [];
       for (const item of matches.sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)))) {
-        result.push({ ...publicDoc(item), homeTeam: await teamView(item.homeTeamId, user), awayTeam: await teamView(item.awayTeamId, user), squads: user.role === "parent" ? [] : (await fetchAll("matchSquads", { matchId: item._id })).map(publicDoc) });
+        let matchSquads = [];
+        if (user.role === "admin") matchSquads = (await fetchAll("matchSquads", { matchId: item._id })).map(publicDoc);
+        else if (user.role === "coach") {
+          const ownTeamIds = new Set((await fetchAll("teams")).filter((team) => team.coachUserId === principal(user)).map((team) => team._id));
+          matchSquads = (await fetchAll("matchSquads", { matchId: item._id })).filter((squad) => ownTeamIds.has(squad.teamId)).map(publicDoc);
+        }
+        result.push({ ...publicDoc(item), homeTeam: await teamView(item.homeTeamId, user), awayTeam: await teamView(item.awayTeamId, user), squads: matchSquads });
       }
       return { round: publicDoc(round), matches: result };
     }
@@ -320,14 +336,14 @@ function createLeagueService({
       requireRole(user, ["admin", "coach"]);
       const team = (await db.collection("teams").doc(input.teamId).get()).data;
       if (!team) throw new Error("球队不存在");
-      if (user.role === "coach" && (team.organizationType !== "INTERNAL" || team.coachUserId !== user._id)) throw new Error("只能管理自己负责的球队");
+      if (user.role === "coach" && (team.organizationType !== "INTERNAL" || team.coachUserId !== principal(user))) throw new Error("只能管理自己负责的球队");
       const squads = await fetchAll("matchSquads", { matchId: input.matchId, teamId: team._id });
       const selected = new Set(squads.map((item) => item.studentId || item.externalPlayerId));
       let members;
       if (team.organizationType === "INTERNAL") {
         const links = await fetchAll("teamMembers", { teamId: team._id, status: "ACTIVE" });
         const students = await fetchByIds("students", links.map((item) => item.studentId));
-        members = links.map((item) => ({ ...publicDoc(item), memberId: item.studentId, name: (students.find((row) => row._id === item.studentId) || {}).name || "", avatarUrl: (students.find((row) => row._id === item.studentId) || {}).avatarUrl || "", memberType: "INTERNAL_STUDENT", selected: selected.has(item.studentId) }));
+        members = links.map((item) => ({ id: item._id, teamId: item.teamId, memberId: item.studentId, name: (students.find((row) => row._id === item.studentId) || {}).name || "", avatarUrl: (students.find((row) => row._id === item.studentId) || {}).avatarUrl || "", jerseyNumber: item.jerseyNumber || "", memberType: "INTERNAL_STUDENT", selected: selected.has(item.studentId) }));
       } else {
         members = (await fetchAll("externalPlayers", { teamId: team._id })).map((item) => ({ ...publicDoc(item), memberId: item._id, memberType: "EXTERNAL_PLAYER", selected: selected.has(item._id) }));
       }
@@ -339,12 +355,13 @@ function createLeagueService({
       const match = (await db.collection("matches").doc(input.matchId).get()).data;
       const team = (await db.collection("teams").doc(input.teamId).get()).data;
       if (!match || !team || ![match.homeTeamId, match.awayTeamId].includes(team._id)) throw new Error("比赛名单信息无效");
-      if (user.role === "coach" && (team.organizationType !== "INTERNAL" || team.coachUserId !== user._id)) throw new Error("只能管理自己负责的内部球队");
+      if (user.role === "coach" && (team.organizationType !== "INTERNAL" || team.coachUserId !== principal(user))) throw new Error("只能管理自己负责的内部球队");
       const prepared = [];
       for (const member of input.members || []) {
         const internal = member.memberType === "INTERNAL_STUDENT";
         if (internal === Boolean(member.externalPlayerId) || internal !== Boolean(member.studentId)) throw new Error("名单成员类型与身份不匹配");
         if (internal && !(await db.collection("teamMembers").where({ teamId: team._id, studentId: member.studentId, status: "ACTIVE" }).limit(1).get()).data.length) throw new Error("内部球员不属于该比赛队");
+        if (user.role === "coach" && internal) await coachScope.assertStudentAccess(user, member.studentId);
         if (!internal && !(await db.collection("externalPlayers").where({ teamId: team._id, _id: member.externalPlayerId }).limit(1).get()).data.length) throw new Error("外部球员不属于该队");
         prepared.push({ ...member, matchId: match._id, teamId: team._id, studentId: member.studentId || "", externalPlayerId: member.externalPlayerId || "", goals: Number(member.goals || 0), assists: Number(member.assists || 0), status: "ACTIVE", createdAt: nowText() });
       }

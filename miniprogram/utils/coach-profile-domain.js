@@ -1,6 +1,7 @@
 const ACTIONS = [
   "listPublicCoaches",
   "getPublicCoach",
+  "getMyPublicCoach",
   "listCoachProfiles",
   "getCoachProfile",
   "saveCoachProfile",
@@ -159,6 +160,12 @@ async function call(action, input, ctx) {
   const { data, role } = ctx;
   ensure(data);
   if (action === "listPublicCoaches") return data.coachProfiles.map(publicView).filter(Boolean);
+  if (action === "getMyPublicCoach") {
+    if (role !== "coach") throw new Error("没有执行该操作的权限");
+    const profile = data.coachProfiles.find((item) => item.coachUserId === ctx.userId && item.active !== false);
+    if (!profile) throw new Error("当前教练档案不存在或已停用");
+    return publicView({ ...profile, active: true, isPublic: true });
+  }
   if (action === "getPublicCoach") {
     const result = publicView(data.coachProfiles.find((item) => item.id === input.id));
     if (!result) throw new Error("教练资料不存在或未公开");

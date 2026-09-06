@@ -10,7 +10,7 @@ async function run() {
   let checks = 0;
   await admin("resetDemo");
   await admin("getClassDetail", { id: "c1718" });
-  storage.nanlianClubV2.sessions.push({ id: "se-parent-class-detail", classId: "c1718", title: "精英队未来训练", date: "2026-08-30", weekday: "周日", time: "18:00-19:30", venue: "三江南联球场", trainingTheme: "1V1突破", status: "published", publishStatus: "PUBLISHED", coachUserId: "coach1", coachName: "游导" });
+  storage.nanlianClubV2.sessions.push({ id: "se-parent-class-detail", classId: "c1718", title: "精英队未来训练", date: "2099-08-30", weekday: "周日", time: "18:00-19:30", venue: "三江南联球场", trainingTheme: "1V1突破", status: "published", publishStatus: "PUBLISHED", coachUserId: "coach1", coachName: "游导" });
 
   const detail = await parent("getParentClassDetail", { id: "c1718" });
   assert(detail.id === "c1718" && detail.name === "U7精英队" && detail.classTypeLabel === "精英队" && detail.ageGroup); checks += 1;

@@ -5,6 +5,7 @@ const path = require("path");
 const storage = {};
 global.wx = { getStorageSync(key) { return storage[key]; }, setStorageSync(key, value) { storage[key] = value; } };
 const domain = require("../miniprogram/utils/local-domain");
+const navigation = require("../miniprogram/utils/navigation-config");
 const admin = (action, data = {}) => domain.call(action, { ...data, previewRole: "admin" });
 const coach = (action, data = {}) => domain.call(action, { ...data, previewRole: "coach", previewUserId: "coach1" });
 const parent = (action, data = {}) => domain.call(action, { ...data, previewRole: "parent", previewUserId: "parent1" });
@@ -88,7 +89,7 @@ async function run() {
   const pages = ["pages/league-dashboard/index", "pages/league-season-form/index", "pages/league-round-detail/index", "pages/league-team-form/index", "pages/league-external-player-form/index", "pages/league-squad/index", "pages/league-match-form/index"];
   assert(pages.every((page) => app.pages.includes(page))); checks += 1;
   pages.forEach((page) => ["js", "json", "wxml", "wxss"].forEach((ext) => assert(fs.existsSync(path.join(root, "miniprogram", `${page}.${ext}`)), `${page}.${ext} missing`))); checks += 1;
-  assert(read("miniprogram/pages/index/index.wxml").includes("周日成长联赛") && read("miniprogram/pages/operations/index.wxml").includes("周日成长联赛")); checks += 1;
+  assert(navigation.homeEntries("admin").some((item) => item.key === "adminLeague" && item.label === "周日成长联赛") && navigation.homeEntries("parent").some((item) => item.key === "parentLeague") && navigation.operationsEntries().some((item) => item.key === "adminLeague")); checks += 1;
 
   console.log(`PHASE E Sunday growth league regression: ${checks} checks passed`);
 }

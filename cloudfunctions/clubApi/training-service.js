@@ -29,10 +29,14 @@ const DEFAULT_CURRICULUMS = [
 ];
 
 function createTrainingService(deps) {
-  const { db, fetchAll, publicDoc, nowText, requireRole, audit, assertStudentAccess } = deps;
+  const { db, fetchAll, publicDoc, nowText, requireRole, audit, assertStudentAccess, coachScope } = deps;
   const focusList = (value) => (Array.isArray(value) ? value : String(value || "").split(/[、，,\n/]+/)).map((item) => String(item).trim()).filter(Boolean);
   const focusText = (value) => focusList(value).join(" / ");
-  const canClass = (user, classId) => user.role === "admin" || user.role === "coach" && (user.classIds || []).includes(classId);
+  const canClass = async (user, classId) => {
+    if (user.role === "admin") return true;
+    if (user.role !== "coach") return false;
+    try { await coachScope.assertClassAccess(user, classId); return true; } catch (error) { if (error.code === "COACH_CLASS_SCOPE_FORBIDDEN") return false; throw error; }
+  };
   const requireStaff = (user) => requireRole(user, ["admin", "coach"]);
   const ageNumbers = (value) => [...String(value || "").matchAll(/U\s*(\d{1,2})/gi)].map((match) => Number(match[1]));
   const ageMatches = (classAgeGroup, curriculumAgeGroup) => {
@@ -103,7 +107,7 @@ function createTrainingService(deps) {
   async function listWeeklyPlans(user, input) {
     requireStaff(user);
     let rows = await fetchAll("weeklyTrainingPlans");
-    rows = rows.filter((item) => canClass(user, item.classId));
+    if (user.role === "coach") { const ids = new Set(await coachScope.assignedClassIds(user)); rows = rows.filter((item) => ids.has(item.classId) && item.coachId === coachScope.coachPrincipalId(user)); }
     if (input.classId) rows = rows.filter((item) => item.classId === input.classId);
     if (input.coachId) rows = rows.filter((item) => item.coachId === input.coachId);
     if (input.status) rows = rows.filter((item) => item.status === input.status);
@@ -115,16 +119,17 @@ function createTrainingService(deps) {
   async function getWeeklyPlan(user, id) {
     requireStaff(user);
     const item = (await db.collection("weeklyTrainingPlans").doc(id).get().catch(() => ({ data: null }))).data;
-    if (!item || !canClass(user, item.classId)) throw new Error("无权查看该周训练计划");
+    if (!item || !(await canClass(user, item.classId)) || user.role === "coach" && item.coachId !== coachScope.coachPrincipalId(user)) throw new Error("无权查看该周训练计划");
     return planView(item);
   }
 
   async function saveWeeklyPlan(user, raw) {
     requireStaff(user);
     const previous = raw.id ? (await db.collection("weeklyTrainingPlans").doc(raw.id).get().catch(() => ({ data: null }))).data : null;
-    if (previous && !canClass(user, previous.classId)) throw new Error("无权修改该周训练计划");
+    if (previous && (!(await canClass(user, previous.classId)) || user.role === "coach" && previous.coachId !== coachScope.coachPrincipalId(user))) throw new Error("无权修改该周训练计划");
+    if (user.role === "coach" && previous && previous.status !== "DRAFT") throw new Error("已锁定周计划只能由管理员调整");
     const classId = String(raw.classId || (previous || {}).classId || "");
-    if (!canClass(user, classId)) throw new Error("只能制定自己负责班级的周计划");
+    if (!(await canClass(user, classId))) throw new Error("只能制定自己负责班级的周计划");
     const clubClass = (await db.collection("classes").doc(classId).get().catch(() => ({ data: null }))).data;
     if (!clubClass || clubClass.status === "INACTIVE") throw new Error("班级不存在或已停用");
     const weekStart = String(raw.weekStart || ""), weekEnd = String(raw.weekEnd || "");
@@ -133,7 +138,7 @@ function createTrainingService(deps) {
     const duplicate = (await fetchAll("weeklyTrainingPlans", { classId, weekStart })).find((item) => item._id !== raw.id && item.status !== "COMPLETED");
     if (duplicate) throw new Error("该班级本周已有训练计划");
     const data = {
-      classId, coachId: user.role === "coach" ? user._id : String(raw.coachId || (previous || {}).coachId || clubClass.headCoachUserId || clubClass.coachUserId || ""),
+      classId, coachId: user.role === "coach" ? coachScope.coachPrincipalId(user) : String(raw.coachId || (previous || {}).coachId || clubClass.headCoachUserId || clubClass.coachUserId || ""),
       coachName: user.role === "coach" ? user.name : String(raw.coachName || (previous || {}).coachName || clubClass.headCoachName || clubClass.coachName || ""),
       weekStart, weekEnd, mainTheme: String(raw.mainTheme || "").trim(), themeKey: String(raw.themeKey || ""), trainingFocus,
       curriculumId: String(raw.curriculumId || ""), status: previous ? previous.status || "DRAFT" : "DRAFT",
@@ -149,7 +154,7 @@ function createTrainingService(deps) {
   async function confirmWeeklyPlan(user, input) {
     requireStaff(user);
     const item = (await db.collection("weeklyTrainingPlans").doc(input.id).get().catch(() => ({ data: null }))).data;
-    if (!item || !canClass(user, item.classId)) throw new Error("无权确认该周训练计划");
+    if (!item || !(await canClass(user, item.classId)) || user.role === "coach" && item.coachId !== coachScope.coachPrincipalId(user)) throw new Error("无权确认该周训练计划");
     const status = input.completed ? "COMPLETED" : "CONFIRMED";
     const data = { status, updatedBy: user._id, updatedAt: nowText() };
     if (input.meetingNote !== undefined) data.meetingNote = String(input.meetingNote || "");
@@ -161,7 +166,8 @@ function createTrainingService(deps) {
   async function saveSessionTraining(user, input) {
     requireStaff(user);
     const session = (await db.collection("sessions").doc(input.sessionId).get().catch(() => ({ data: null }))).data;
-    if (!session || !canClass(user, session.classId)) throw new Error("无权修改该课程训练信息");
+    if (!session) throw new Error("课程不存在");
+    if (user.role === "coach") await coachScope.assertSessionAccess(user, session);
     const trainingTheme = String(input.trainingTheme || "").trim(), trainingFocus = focusText(input.trainingFocus);
     if (!trainingTheme || !trainingFocus) throw new Error("请填写训练主题和训练重点");
     const weeklyTrainingPlanId = String(input.weeklyTrainingPlanId || "");
@@ -188,7 +194,7 @@ function createTrainingService(deps) {
       return value;
     }
     requireStaff(user);
-    if (!canClass(user, session.classId)) throw new Error("无权查看该课程训练信息");
+    if (user.role === "coach") await coachScope.assertSessionAccess(user, session);
     return { ...value, trainingNote: session.trainingNote || "", weeklyPlan: weekly ? await planView(weekly) : null };
   }
 
@@ -221,8 +227,10 @@ function createTrainingService(deps) {
   async function dashboard(user) {
     requireStaff(user);
     const [curriculums, plans, sessions] = await Promise.all([fetchAll("curriculums"), fetchAll("weeklyTrainingPlans"), fetchAll("sessions")]);
-    const visiblePlans = plans.filter((item) => canClass(user, item.classId));
-    const visibleSessions = sessions.filter((item) => canClass(user, item.classId));
+    const classIds = user.role === "coach" ? new Set(await coachScope.assignedClassIds(user)) : null;
+    const coachId = user.role === "coach" ? coachScope.coachPrincipalId(user) : "";
+    const visiblePlans = plans.filter((item) => !classIds || classIds.has(item.classId) && item.coachId === coachId);
+    const visibleSessions = sessions.filter((item) => !classIds || classIds.has(item.classId) && ((item.actualCoachAssignments || []).length ? item.actualCoachAssignments : item.plannedCoachAssignments || []).some((row) => row.coachId === coachId));
     const rows = [];
     for (const item of visiblePlans.sort((a, b) => String(b.weekStart).localeCompare(String(a.weekStart))).slice(0, 20)) rows.push(await planView(item));
     return { metrics: { curriculums: curriculums.filter((item) => item.active !== false).length, weeklyPlans: visiblePlans.length, confirmedPlans: visiblePlans.filter((item) => item.status === "CONFIRMED").length, sessions: visibleSessions.length, filledSessions: visibleSessions.filter((item) => item.trainingTheme && String(item.trainingFocus || "").trim()).length }, weeklyPlans: rows };

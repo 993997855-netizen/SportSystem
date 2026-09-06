@@ -1,0 +1,15 @@
+<view class="page page-enter">
+  <view class="notice">家长提交的孩子资料会先进入这里。审核通过后，系统才会创建或绑定正式学员，并出现在家长端“我的孩子”。</view>
+  <view class="loading-state" wx:if="{{loading}}">加载中...</view>
+  <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重试</view></view>
+  <block wx:else>
+    <view class="section-title">待审核资料（{{requests.length}}）</view>
+    <view class="card request" wx:for="{{requests}}" wx:key="id">
+      <view class="between"><view class="person"><image wx:if="{{item.avatarUrl}}" class="avatar" src="{{item.avatarUrl}}" mode="aspectFill"/><view wx:else class="avatar fallback">{{item.name[0] || '学'}}</view><view><view class="name">{{item.name}}</view><view class="muted small">家长：{{item.parentName || '未填写'}} · {{item.parentMobile || '未填写'}}</view></view></view><view class="tag gold">待审核</view></view>
+      <view class="grid"><view><text class="muted small">性别</text><text>{{item.gender}}</text></view><view><text class="muted small">出生日期</text><text>{{item.birthDate}}</text></view><view><text class="muted small">学校 / 年级</text><text>{{item.school}} · {{item.grade}}</text></view><view><text class="muted small">身份证</text><text>{{item.idCardDisplay}}</text></view></view>
+      <view class="muted small" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
+      <view class="actions"><button size="mini" class="reject" data-id="{{item.id}}" data-decision="REJECT" bindtap="review">驳回</button><button size="mini" class="approve" loading="{{actingId === item.id}}" data-id="{{item.id}}" data-decision="APPROVE" bindtap="review">通过并创建学员</button></view>
+    </view>
+    <view class="empty card" wx:if="{{requests.length === 0}}">当前没有待审核的孩子资料</view>
+  </block>
+</view>

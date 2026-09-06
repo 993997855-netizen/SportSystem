@@ -1,4 +1,4 @@
-const ACTIONS = ["listPublicCoaches", "getPublicCoach", "listCoachProfiles", "getCoachProfile", "saveCoachProfile", "updateCoachAvatar"];
+const ACTIONS = ["listPublicCoaches", "getPublicCoach", "getMyPublicCoach", "listCoachProfiles", "getCoachProfile", "saveCoachProfile", "updateCoachAvatar"];
 
 const DEMO_COACHES = [
   { seedKey: "coach-profile-you", coachUserId: "coach1", name: "游导", avatarUrl: "/images/nanlian-logo.png", publicTitle: "U8精英队主教练", coachingYears: 10, highestCertificate: "中国足协B级教练员", certificates: [{ name: "中国足协B级教练员", visibility: "PUBLIC", priority: 1 }, { name: "青少年急救培训证", visibility: "PUBLIC", priority: 2 }, { name: "俱乐部内部教研认证", visibility: "INTERNAL", priority: 3 }], currentClasses: ["U8提高班", "U7精英队", "U8精英队"], specialties: ["1V1", "控球", "比赛指导", "梯队建设"], shortBio: "长期从事青少年足球训练，主要负责南联精英梯队培养。注重个人技术、比赛意识和训练兴趣，鼓励孩子在比赛中主动观察和解决问题。", bio: "负责南联青训训练体系与精英梯队建设，长期参与青少年足球训练、赛事组织和升学衔接工作。", careerHistory: ["2016-2020 青少年足球教练", "2021-2025 南联精英梯队主教练", "2026至今 南联青训负责人"], footballHistory: ["长期参加温州地区高水平成人足球赛事"], trainingPhilosophy: "让孩子在真实比赛问题中学会观察、判断和行动。", honors: ["带队参加浙江省青少年足球联赛"], internalNote: "头牌全职教练，内部薪资与绩效信息不得公开。", active: true, isPublic: true },
@@ -48,6 +48,7 @@ function createCoachService({ db, fetchAll, nowText, requireRole, audit, getBind
   async function call(action, input, user) {
     await ensureDefaults();
     if (action === "listPublicCoaches") return (await fetchAll("coachProfiles")).map(publicView).filter(Boolean);
+    if (action === "getMyPublicCoach") { requireRole(user, ["coach"]); const profile = await findProfile(user.coachId || user._id); if (!profile || profile.active === false) throw new Error("当前教练档案不存在或已停用"); return publicView({ ...profile, active: true, isPublic: true }); }
     if (action === "getPublicCoach") { const profile = (await db.collection("coachProfiles").doc(input.id).get().catch(() => ({ data: null }))).data, result = publicView(profile); if (!result) throw new Error("教练资料不存在或未公开"); return result; }
     if (action === "listCoachProfiles") { requireRole(user, ["admin"]); const rows = []; for (const item of await fetchAll("coachProfiles")) rows.push(await adminView(item)); return rows; }
     if (action === "getCoachProfile") { requireRole(user, ["admin"]); const profile = await findProfile(input.id); if (!profile) throw new Error("教练资料不存在"); return adminView(profile); }

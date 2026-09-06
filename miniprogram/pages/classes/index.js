@@ -1,5 +1,6 @@
 const api = require("../../utils/api");
 const { today } = require("../../utils/format");
+const navigation = require("../../utils/navigation-config");
 
 Page({
   data: { classes: [], role: "admin", mode: "local", keyword: "", today: today(), loading: true, error: "", invitingId: "" },
@@ -9,11 +10,12 @@ Page({
     if (!fromRefresh) this.setData({ loading: true, error: "" });
     try {
       const [context, classes] = await Promise.all([api.call("getContext"), api.call("listClasses", { keyword: this.data.keyword })]);
+      wx.setNavigationBarTitle({ title: context.user.role === "admin" ? "班级管理" : context.user.role === "coach" ? "我的班级" : "班级报名" });
       this.setData({ classes, role: context.user.role, mode: context.mode, loading: false, error: "" });
     } catch (error) { this.setData({ loading: false, error: "班级数据加载失败" }); }
     finally { wx.stopPullDownRefresh(); }
   },
-  attendance() { wx.switchTab({ url: "/pages/sessions/index" }); },
+  attendance() { navigation.openFeature(this.data.role === "admin" ? "adminCourses" : "coachAttendance", this.data.role); },
   keyword(event) { this.setData({ keyword: event.detail.value }); },
   search() { this.load(); },
   open(event) { wx.navigateTo({ url: `/pages/class-detail/index?id=${event.currentTarget.dataset.id}` }); },

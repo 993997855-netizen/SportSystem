@@ -1,14 +1,20 @@
 const api = require("../../utils/api");
 const { roleLabels } = require("../../utils/format");
+const navigation = require("../../utils/navigation-config");
 
 Page({
-  data: { context: null, roleLabel: "", modeLabel: "", inviteCode: "", loading: true, error: "", binding: false, switchingRole: false, roles: [{ value: "admin", label: "管理员" }, { value: "coach", label: "教练员" }, { value: "parent", label: "学员端" }] },
+  data: { context: null, roleLabel: "", modeLabel: "", menuEntries: [], activeStudentId: "", inviteCode: "", loading: true, error: "", binding: false, switchingRole: false, roles: [{ value: "admin", label: "管理员" }, { value: "coach", label: "教练员" }, { value: "parent", label: "学员端" }] },
   onShow() { this.load(); },
   async load() {
     this.setData({ loading: true, error: "" });
     try {
       const context = await api.call("getContext");
-      this.setData({ context, roleLabel: roleLabels[context.user.role], modeLabel: context.mode === "local" ? "本地演示" : "云端共享", loading: false });
+      let activeStudentId = "";
+      if (context.user.role === "parent") {
+        const family = await api.call("getFamilyContext").catch(() => null);
+        activeStudentId = family && family.activeStudentId ? family.activeStudentId : "";
+      }
+      this.setData({ context, activeStudentId, menuEntries: navigation.profileEntries(context.user.role), roleLabel: roleLabels[context.user.role], modeLabel: context.mode === "local" ? "本地演示" : "云端共享", loading: false });
     } catch (error) { this.setData({ loading: false, error: "账号信息加载失败" }); }
   },
   async switchRole(event) {
@@ -23,16 +29,16 @@ Page({
       this.setData({ switchingRole: false });
     }
   },
-  sessions() { wx.switchTab({ url: "/pages/sessions/index" }); },
-  leaves() { wx.navigateTo({ url: "/pages/leave-requests/index" }); },
-  operations() { wx.navigateTo({ url: "/pages/operations/index" }); },
-  classes() { wx.navigateTo({ url: "/pages/classes/index" }); },
+  openMenu(event) {
+    const key = event.currentTarget.dataset.key;
+    const params = {};
+    if (key === "parentGrowth" || key === "parentAssessment") {
+      if (!this.data.activeStudentId) { wx.showToast({ title: "请先添加孩子", icon: "none" }); return; }
+      params.studentId = this.data.activeStudentId;
+    }
+    navigation.openFeature(key, this.data.context.user.role, params);
+  },
   register() { wx.navigateTo({ url: "/pages/parent-child-form/index" }); },
-  accounts() { wx.navigateTo({ url: "/pages/account-management/index" }); },
-  news() { wx.navigateTo({ url: "/pages/news/index" }); },
-  commerce() { wx.navigateTo({ url: "/pages/commerce-admin/index" }); },
-  orders() { wx.navigateTo({ url: "/pages/orders/index" }); },
-  notifications() { wx.navigateTo({ url: "/pages/notifications/index" }); },
   logout() {
     wx.showModal({ title: "退出登录", content: "退出只会清理本机登录状态，不会删除账号、孩子或历史业务数据。", success: (result) => { if (result.confirm) api.logout(); } });
   },

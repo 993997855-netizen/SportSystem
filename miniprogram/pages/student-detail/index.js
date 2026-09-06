@@ -12,11 +12,11 @@ Page({
       const [context, student] = await Promise.all([api.call("getContext"), api.call("getStudent", { id: this.data.id })]);
       student.initial = student.name ? student.name[0] : "学";
       student.attendance = student.attendance.map((item) => ({ ...item, statusLabel: attendanceLabels[item.status] }));
-      this.setData({ student: { ...student, lowBalance: Number(student.remainingLessons) <= 5 }, role: context.user.role, mode: context.mode, loading: false });
+      this.setData({ student: { ...student, lowBalance: context.user.role !== "coach" && Number(student.remainingLessons) <= 5 }, role: context.user.role, mode: context.mode, loading: false });
     } catch (error) { this.setData({ loading: false, error: "学员详情加载失败" }); }
   },
   edit() { wx.navigateTo({ url: `/pages/student-form/index?id=${this.data.id}` }); },
-  renew() { wx.navigateTo({ url: `/pages/orders/index?studentId=${this.data.id}` }); },
+  renew() { wx.navigateTo({ url: `/pages/orders/index?mode=purchase&studentId=${this.data.id}` }); },
   privateProfile() { wx.navigateTo({ url: `/pages/student-private-profile/index?studentId=${this.data.id}&name=${this.data.student.name}` }); },
   transferParent() { wx.navigateTo({ url: `/pages/student-parent-transfer/index?studentId=${this.data.id}` }); },
   growth() { wx.navigateTo({ url: `/pages/growth-profile/index?studentId=${this.data.id}` }); },

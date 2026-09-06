@@ -1,7 +1,7 @@
 const api = require("../../utils/api");
 
 Page({
-  data: { studentId: "", fromClassId: "", role: "coach", classes: [], classIndex: 0, reason: "", keepSource: true, growth: null, saving: false, loading: true, error: "" },
+  data: { studentId: "", fromClassId: "", role: "coach", classes: [], classIndex: 0, reason: "", trainingPerformance: "", technicalPerformance: "", matchPerformance: "", keepSource: true, growth: null, saving: false, loading: true, error: "" },
   async onLoad(options) {
     this.setData({ studentId: options.studentId || "", fromClassId: options.fromClassId || "", loading: true, error: "" });
     try {
@@ -12,6 +12,7 @@ Page({
   },
   classChange(event) { this.setData({ classIndex: Number(event.detail.value) }); },
   field(event) { this.setData({ reason: event.detail.value }); },
+  detailField(event) { this.setData({ [event.currentTarget.dataset.key]: event.detail.value }); },
   keep(event) { this.setData({ keepSource: event.detail.value }); },
   submit() { this.save(false); },
   async save(confirmCapacity) {
@@ -20,7 +21,7 @@ Page({
     this.setData({ saving: true });
     try {
       const action = this.data.role === "admin" ? "promoteToElite" : "recommendElite";
-      const payload = this.data.role === "admin" ? { studentId: this.data.studentId, fromClassId: this.data.fromClassId, targetEliteClassId: target.id, reason: this.data.reason, keepSource: this.data.keepSource, confirmCapacity } : { studentId: this.data.studentId, fromClassId: this.data.fromClassId, targetEliteClassId: target.id, recommendationReason: this.data.reason };
+      const payload = this.data.role === "admin" ? { studentId: this.data.studentId, fromClassId: this.data.fromClassId, targetEliteClassId: target.id, reason: this.data.reason, keepSource: this.data.keepSource, confirmCapacity } : { studentId: this.data.studentId, fromClassId: this.data.fromClassId, targetEliteClassId: target.id, recommendationReason: this.data.reason, trainingPerformance: this.data.trainingPerformance, technicalPerformance: this.data.technicalPerformance, matchPerformance: this.data.matchPerformance };
       const result = await api.call(action, payload);
       if (result.requiresConfirmation) return wx.showModal({ title: "超出标准容量", content: result.message, confirmText: "确认晋升", success: (modal) => { if (modal.confirm) this.save(true); } });
       wx.showToast({ title: this.data.role === "admin" ? "晋升完成" : "推荐已提交" });

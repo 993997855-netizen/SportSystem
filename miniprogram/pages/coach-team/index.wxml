@@ -1,4 +1,4 @@
-<view class="team-hero"><view class="team-eyebrow">NANLIAN COACHING TEAM</view><view class="team-title">南联教练团队</view><view class="team-sub">快速了解教练的资质、经验与训练方向</view></view>
+<view class="team-hero"><view class="team-eyebrow">NANLIAN COACHING TEAM</view><view class="team-title">{{pageTitle}}</view><view class="team-sub">{{role === 'coach' && viewMode === 'self' ? '查看本人公开教练资料' : '快速了解教练的资质、经验与训练方向'}}</view></view>
 <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
 <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
 <view class="page page-enter" wx:else>
@@ -15,5 +15,5 @@
       <view class="between card-footer"><text class="view-link">查看介绍 ›</text><view wx:if="{{role === 'admin'}}"><text wx:if="{{item.accountStatus === 'UNBOUND'}}" class="invite-link" data-id="{{item.profileId}}" catchtap="invite">生成邀请</text><text class="edit-link" data-id="{{item.profileId}}" catchtap="edit">管理资料</text></view></view>
     </view>
   </view>
-  <view class="empty card" wx:if="{{visibleCoaches.length === 0}}">暂无符合条件的教练</view>
+  <view class="empty card" wx:if="{{visibleCoaches.length === 0}}">{{testRoleWithoutCoach ? '当前为管理员模拟COACH测试角色，尚未绑定真实教练档案' : (role === 'coach' && viewMode === 'self' ? '暂未找到当前教练档案，请联系管理员' : '暂无符合条件的教练')}}</view>
 </view>

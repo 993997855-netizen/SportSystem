@@ -11,6 +11,6 @@
       <view class="actions" wx:if="{{(role === 'admin' || role === 'coach') && item.status === 'pending'}}"><button size="mini" class="reject" data-id="{{item.id}}" data-approved="false" bindtap="review">拒绝</button><button size="mini" class="approve" data-id="{{item.id}}" data-approved="true" bindtap="review">批准请假</button></view>
       <view class="actions" wx:if="{{role === 'parent' && item.status === 'pending'}}"><button size="mini" class="reject" data-id="{{item.id}}" bindtap="cancel">撤销请假</button></view>
     </view>
-    <view class="empty card" wx:if="{{requests.length === 0}}">暂无请假记录</view>
+    <view class="empty card" wx:if="{{requests.length === 0}}">{{role === 'parent' ? '当前暂无请假记录' : '当前暂无待处理请假'}}</view>
   </block>
 </view>

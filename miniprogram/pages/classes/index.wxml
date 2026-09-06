@@ -1,6 +1,6 @@
 <view class="page page-enter">
   <view class="search-box"><input class="input" value="{{keyword}}" bindinput="keyword" confirm-type="search" bindconfirm="search" placeholder="按班级号、班级名或教练搜索"/><button size="mini" class="btn-primary" bindtap="search">搜索</button></view>
-  <view class="class-actions" wx:if="{{role === 'admin' || role === 'coach'}}">
+  <view class="class-actions" wx:if="{{role === 'admin'}}">
     <view class="create-pill pressable" bindtap="add"><text class="create-plus">＋</text>创建班级</view>
   </view>
   <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
@@ -8,7 +8,7 @@
   <block wx:else>
   <view class="card class-card pressable" wx:for="{{classes}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
     <view class="top between">
-      <view><view class="name">{{item.name}} <text class="class-code">{{item.classCode}}</text></view><view class="row"><view class="tag">普通班</view><view class="coach-chip"><image wx:if="{{item.headCoach.avatarUrl}}" src="{{item.headCoach.avatarUrl}}" mode="aspectFill"/><view wx:else class="coach-avatar-fallback">教</view><text>{{item.headCoach.name || item.headCoachName || item.coachName}}</text></view><text class="edit" wx:if="{{role === 'admin' || role === 'coach'}}" data-id="{{item.id}}" catchtap="edit">编辑</text><text class="edit" wx:if="{{role === 'admin' && mode === 'cloud' && !item.headCoachUserId}}" catchtap="coachInvite">教练管理</text></view></view>
+      <view><view class="name">{{item.name}} <text class="class-code">{{item.classCode}}</text></view><view class="row"><view class="tag">普通班</view><view class="coach-chip"><image wx:if="{{item.headCoach.avatarUrl}}" src="{{item.headCoach.avatarUrl}}" mode="aspectFill"/><view wx:else class="coach-avatar-fallback">教</view><text>{{item.headCoach.name || item.headCoachName || item.coachName}}</text></view><text class="edit" wx:if="{{role === 'admin'}}" data-id="{{item.id}}" catchtap="edit">编辑</text><text class="edit" wx:if="{{role === 'admin' && mode === 'cloud' && !item.headCoachUserId}}" catchtap="coachInvite">教练管理</text></view></view>
       <view class="member"><text>{{item.studentCount}} / {{item.standardCapacity}}</text><text class="small muted">当前 / 标准</text></view>
     </view>
     <view class="divider"></view>
@@ -18,6 +18,6 @@
     <view class="capacity-note {{item.overCapacity ? 'over' : ''}}">{{item.overCapacity ? '已超标准容量 '+item.overCapacity+' 人' : item.enrollmentLabel}}</view>
     <button wx:if="{{role !== 'parent'}}" class="btn-primary take" data-id="{{item.id}}" bindtap="attendance">查看课程</button>
   </view>
-  <view class="empty card" wx:if="{{classes.length === 0}}">当前还没有班级</view>
+  <view class="empty card" wx:if="{{classes.length === 0}}">{{role === 'coach' ? '当前暂无负责班级' : (role === 'parent' ? '当前暂无可报名班级' : '当前还没有班级')}}</view>
   </block>
 </view>

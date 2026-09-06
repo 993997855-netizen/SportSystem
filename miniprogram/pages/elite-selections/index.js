@@ -8,12 +8,14 @@ Page({
     this.setData({ loading: true, error: "" });
     try {
       const [context, rows] = await Promise.all([api.call("getContext"), api.call("listEliteSelections")]);
+      wx.setNavigationBarTitle({ title: context.user.role === "coach" ? "精英队推荐" : "精英队选拔" });
       const filtered = this.data.classId ? rows.filter((item) => item.targetEliteClassId === this.data.classId) : rows;
       this.setData({ role: context.user.role, rows: filtered, loading: false });
     } catch (error) { this.setData({ loading: false, error: error.message || "推荐记录加载失败" }); }
   },
   keep(event) { this.setData({ keepSource: event.detail.value }); },
   openGrowth(event) { wx.navigateTo({ url: `/pages/growth-profile/index?studentId=${event.currentTarget.dataset.student}` }); },
+  recommend() { wx.navigateTo({ url: "/pages/classes/index" }); },
   review(event) {
     const id = event.currentTarget.dataset.id;
     const approved = event.currentTarget.dataset.approved === true || event.currentTarget.dataset.approved === "true";

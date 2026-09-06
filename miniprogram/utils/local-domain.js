@@ -269,15 +269,14 @@ async function call(action, input = {}) {
       return classesV3.decorateClass(data, clubClass);
     }
     case "saveClass": {
-      assertRole(role, ["admin", "coach"]); const payload = input.clubClass; let classId = payload.id;
+      assertRole(role, ["admin"]); const payload = input.clubClass; let classId = payload.id;
       const previous = classId && data.classes.find((item) => item.id === classId);
-      if (role === "coach" && previous && !roleClassIds(data, role, userId).includes(classId)) throw new Error("无权编辑该班级");
-      const headCoachUserId = role === "coach" ? userId : String(payload.headCoachUserId || "");
+      const headCoachUserId = String(payload.headCoachUserId || "");
       const headCoach = (data.users || []).filter((item) => item.id === headCoachUserId && item.role === "coach").slice(-1)[0];
       if (!headCoach) throw new Error("请选择已绑定的主教练");
       const scheduleSlots = Array.isArray(payload.scheduleSlots) ? payload.scheduleSlots.map((slot) => ({ weekday: String(slot.weekday || ""), startTime: String(slot.startTime || ""), endTime: String(slot.endTime || "") })).filter((slot) => slot.weekday && slot.startTime && slot.endTime && slot.startTime < slot.endTime) : [];
       const schedule = scheduleSlots.length ? scheduleSlots.map((slot) => `${slot.weekday} ${slot.startTime}-${slot.endTime}`).join(" / ") : String(payload.schedule || "").trim();
-      const assistantCoachIds = role === "admin" ? [...new Set((payload.assistantCoachIds || []).filter((id) => id && id !== headCoachUserId))] : (previous || {}).assistantCoachIds || [];
+      const assistantCoachIds = [...new Set((payload.assistantCoachIds || []).filter((id) => id && id !== headCoachUserId))];
       if (assistantCoachIds.some((id) => !(data.users || []).some((item) => item.id === id && item.role === "coach" && item.active !== false))) throw new Error("助理教练账号无效");
       const normalized = { ...payload, classType: payload.classType === "ELITE" ? "ELITE" : "REGULAR", ageGroup: String(payload.ageGroup || "").trim(), standardCapacity: Math.max(1, Number(payload.standardCapacity || 20)), headCoachUserId, coachUserId: headCoachUserId, headCoachName: headCoach.name, coachName: headCoach.name, assistantCoachIds, assistantCoachName: assistantCoachIds.map((id) => ((data.users || []).find((item) => item.id === id) || {}).name).filter(Boolean).join("、"), schedule, scheduleSlots, venue: String(payload.venue || "").trim(), status: payload.status === "INACTIVE" ? "INACTIVE" : "ACTIVE", active: payload.status !== "INACTIVE", remark: String(payload.remark || "").trim() };
       if (!normalized.name || !normalized.ageGroup || !normalized.headCoachName || !normalized.schedule || !normalized.venue) throw new Error("请完整填写班级信息");
