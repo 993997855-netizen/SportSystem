@@ -12,7 +12,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 let checks = 0;
 function check(value, message) { assert(value, message); checks += 1; }
 
-const expectedHomeCounts = { admin: 16, coach: 11, parent: 13 };
+const expectedHomeCounts = { admin: 16, coach: 5, parent: 5 };
 Object.entries(expectedHomeCounts).forEach(([role, expected]) => {
   const rows = navigation.homeEntries(role);
   check(rows.length === expected, `${role} home entry count must be ${expected}`);
@@ -49,6 +49,13 @@ Object.entries(navigation.ROUTE_REUSE_ALLOWLIST).forEach(([route, keys]) => {
 
 const coachKeys = new Set(navigation.HOME_FEATURES.coach);
 ["adminOperations", "adminCrm", "adminClasses", "adminCourses", "adminPublishSession"].forEach((key) => check(!coachKeys.has(key), `coach menu excludes ${key}`));
+check(coachKeys.size <= 6, "coach home keeps no more than six primary actions");
+check(["coachTimetable", "coachClasses", "coachGrowth", "coachElite", "coachWorkload"].every((key) => coachKeys.has(key)), "coach home keeps the five simplified task groups");
+check(!["coachStudents", "coachAttendance", "coachWeeklyPlans", "coachAssessment", "coachProfile", "coachNews"].some((key) => coachKeys.has(key)), "coach duplicate and secondary actions leave the home grid");
+const parentKeys = new Set(navigation.HOME_FEATURES.parent);
+check(parentKeys.size <= 6, "parent home keeps no more than six primary actions");
+check(["parentCourses", "parentLeaves", "parentGrowth", "parentPackages", "parentLeague"].every((key) => parentKeys.has(key)), "parent home keeps the five simplified task groups");
+check(!["parentChildren", "parentClasses", "parentTimetable", "parentAssessment", "parentEnrollment", "parentOrders", "parentCoaches", "parentNews"].some((key) => parentKeys.has(key)), "parent duplicate and secondary actions leave the home grid");
 const indexJs = read("miniprogram/pages/index/index.js");
 const indexWxml = read("miniprogram/pages/index/index.wxml");
 const profileJs = read("miniprogram/pages/profile/index.js");
@@ -63,6 +70,9 @@ check(read("cloudfunctions/clubApi/coach-service.js").includes('requireRole(user
 check(read("miniprogram/pages/coach-team/index.js").includes("testRoleWithoutCoach"), "test-role coach does not impersonate an arbitrary coach profile");
 check(read("miniprogram/pages/growth-profile/index.wxml").includes("viewMode !== 'assessment'"), "parent assessment mode hides non-assessment growth sections");
 check(read("miniprogram/pages/elite-selections/index.wxml").includes("从我的班级选择学员推荐"), "coach elite entry exposes the recommendation workflow");
+check(read("miniprogram/pages/coach-workbench/index.wxml").includes("开始点名") && read("miniprogram/pages/coach-workbench/index.wxml").includes("课后记录"), "today teaching completes key classroom actions on one page");
+check(read("miniprogram/pages/sessions/index.wxml").includes("完整课表") && read("miniprogram/pages/sessions/index.wxml").includes("班级报名"), "parent courses contains timetable and class signup as secondary actions");
+check(read("miniprogram/pages/orders/index.wxml").includes("课时") && read("miniprogram/pages/orders/index.wxml").includes("我的订单"), "parent commerce combines lesson balance, purchase and orders");
 
 ["students", "sessions"].forEach((page) => {
   const source = read(`miniprogram/pages/${page}/index.js`);

@@ -3,7 +3,7 @@ const { roleLabels } = require("../../utils/format");
 const navigation = require("../../utils/navigation-config");
 
 Page({
-  data: { context: null, roleLabel: "", modeLabel: "", menuEntries: [], activeStudentId: "", inviteCode: "", loading: true, error: "", binding: false, switchingRole: false, roles: [{ value: "admin", label: "管理员" }, { value: "coach", label: "教练员" }, { value: "parent", label: "学员端" }] },
+  data: { context: null, roleLabel: "", modeLabel: "", menuEntries: [], activeStudentId: "", inviteCode: "", loading: true, error: "", binding: false, switchingRole: false, roles: [{ value: "admin", label: "管理员" }, { value: "coach", label: "教练员" }, { value: "parent", label: "家长" }] },
   onShow() { this.load(); },
   async load() {
     this.setData({ loading: true, error: "" });

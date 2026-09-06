@@ -50,7 +50,8 @@ async function rejects(call, pattern) {
   check(navigation.FEATURES.adminCrm.roles.length === 1 && navigation.FEATURES.adminCrm.roles[0] === "admin", "CRM entry is admin-only");
   check(navigation.FEATURES.adminOperations.roles.length === 1 && navigation.FEATURES.adminOperations.roles[0] === "admin", "operations entry is admin-only");
   check(navigation.profileEntries("coach").every((item) => item.key !== "adminOperations"), "profile operations entry is excluded from coach");
-  check(["coachElite", "coachWorkload", "coachAttendance"].every((key) => coachHome.some((item) => item.key === key)), "coach home retains elite, workload and attendance entries");
+  check(["coachTimetable", "coachClasses", "coachGrowth", "coachElite", "coachWorkload"].every((key) => coachHome.some((item) => item.key === key)), "coach home retains five simplified task groups");
+  check(!["coachStudents", "coachAttendance", "coachWeeklyPlans", "coachAssessment", "coachProfile", "coachNews"].some((key) => coachHome.some((item) => item.key === key)), "coach duplicate and secondary entries leave the home grid");
   check(!coachHome.some((item) => item.key === "coachCurriculums"), "coach home no longer exposes redundant curriculum entry");
   check(home.includes("wx:for=\"{{quickEntries}}\"") && profile.includes("wx:for=\"{{menuEntries}}\""), "home and profile use role-scoped navigation configuration");
   check(classes.includes("wx:if=\"{{role === 'admin'}}\"") && classes.includes("创建班级"), "class creation button is admin-only");

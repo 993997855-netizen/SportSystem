@@ -10,7 +10,7 @@
 .stat-value { display: block; font-size: 40rpx; line-height: 1.1; font-weight: 800; color: #173b77; }
 .stat-value.warn { color: #d97800; }
 .stat-label { display: block; color: #7a817d; font-size: 24rpx; margin-top: 10rpx; }
-.quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12rpx; }
+.quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12rpx; }
 .quick { background: #fff; border:1rpx solid #edf1f6; padding: 19rpx 8rpx; border-radius: 18rpx; text-align: center; font-size: 24rpx; }
 .quick-icon { width: 60rpx; height: 60rpx; margin: 0 auto 10rpx; line-height: 60rpx; border-radius: 18rpx; font-weight: 800; }
 .green { background: #e8f5ee; color: #12643b; }.blue { background: #eaf1ff; color: #336fd1; }.gold{background:#fff6da;color:#8c6700}.orange { background: #fff1dd; color: #c56c00; }.navy{background:#e8edf7;color:#173b77}
@@ -25,3 +25,5 @@
 @keyframes ball-float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8rpx) rotate(8deg); } }
 .notice{border-left:8rpx solid #d1a72f;line-height:1.65}.notice-title{font-weight:700;color:#8c6700;margin-bottom:8rpx}.section-row{margin-top:8rpx}.section-row .section-title{margin-bottom:20rpx}.link{color:#2d5ea8}.class-card{display:flex;align-items:center;gap:16rpx}
 .parent-empty{text-align:center;padding:38rpx 28rpx}.empty-ball{font-size:62rpx}.empty-title{font-size:34rpx;font-weight:800;color:#173b77;margin-top:10rpx}.empty-copy{font-size:27rpx;color:#4e5965;margin-top:14rpx}.empty-benefits{font-size:24rpx;color:#727d88;line-height:1.7;margin:18rpx 0 24rpx}.add-child{max-width:420rpx}
+.action-card{border-left:8rpx solid #173b77}.action-kicker{color:#2d5ea8;font-size:24rpx;font-weight:700}.action-title{font-size:34rpx;font-weight:800;color:#173b77;margin:10rpx 0}.action-button{margin-top:20rpx}.action-buttons{display:flex;gap:14rpx;margin-top:20rpx}.action-buttons button{flex:1;margin:0}.quick text{display:block;line-height:1.35}.content>.notice{margin-top:20rpx}
+.news-list{padding-top:8rpx;padding-bottom:8rpx}.news-row{display:flex;align-items:center;gap:16rpx;padding:18rpx 0;border-bottom:1rpx solid #edf1f5}.news-row:last-child{border-bottom:0}.news-title{font-weight:700;margin-bottom:6rpx}

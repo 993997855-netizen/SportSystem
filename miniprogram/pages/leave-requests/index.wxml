@@ -3,6 +3,7 @@
   <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重试</view></view>
   <block wx:else>
     <picker wx:if="{{role === 'parent' && students.length > 1}}" range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="studentChange"><view class="card child-switch"><view class="grow">当前学员：{{students[studentIndex].name}}</view><text class="link">切换 ▾</text></view></picker>
+    <block wx:if="{{role === 'parent'}}"><view class="section-title">最近可请假的课程</view><view class="card leave-course" wx:for="{{upcomingSessions}}" wx:key="id"><view><view class="name">{{item.date}} {{item.time}}</view><view>{{item.title}}</view><view class="muted small">{{item.venue}}</view></view><button size="mini" class="btn-primary" data-id="{{item.id}}" bindtap="openCourse">我要请假</button></view><view class="empty card" wx:if="{{upcomingSessions.length === 0}}">当前没有可请假的近期课程</view></block>
     <view class="section-title">请假记录</view>
     <view class="card request" wx:for="{{requests}}" wx:key="id">
       <view class="between"><view><view class="name">{{item.student.name}}</view><view class="muted small">{{item.clubClass.name}} · {{item.session.title}}</view></view><view class="tag {{item.status === 'pending' ? 'gold' : item.status === 'rejected' ? 'danger' : ''}}">{{item.statusLabel}}</view></view>

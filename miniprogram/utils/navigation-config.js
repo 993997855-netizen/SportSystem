@@ -23,29 +23,29 @@ const FEATURES = Object.freeze({
   adminChildProfiles: { label: "孩子资料审核", icon: "审", tone: "gold", route: "/pages/child-profile-requests/index", roles: ["admin"], title: "孩子资料审核" },
   adminNews: { label: "新闻公告", icon: "讯", tone: "navy", route: "/pages/news/index", roles: ["admin"], title: "新闻公告" },
 
-  coachTimetable: { label: "我的课表", icon: "表", tone: "blue", route: "/pages/coach-workbench/index", roles: ["coach"], title: "我的课表" },
+  coachTimetable: { label: "今日教学", icon: "课", tone: "blue", route: "/pages/coach-workbench/index", roles: ["coach"], title: "今日教学" },
   coachClasses: { label: "我的班级", icon: "班", tone: "blue", route: "/pages/classes/index", roles: ["coach"], title: "我的班级" },
   coachStudents: { label: "我的学员", icon: "人", tone: "gold", route: "/pages/students/index", roles: ["coach"], title: "我的学员", mode: "directory", tab: true },
   coachAttendance: { label: "考勤", icon: "勤", tone: "green", route: "/pages/sessions/index", roles: ["coach"], title: "考勤", mode: "attendance", tab: true },
   coachWeeklyPlans: { label: "周训练计划", icon: "周", tone: "gold", route: "/pages/training-cycles/index", roles: ["coach"], title: "周训练计划" },
   coachAssessment: { label: "阶段评价", icon: "评", tone: "green", route: "/pages/assessment-rounds/index", roles: ["coach"], title: "阶段评价" },
-  coachGrowth: { label: "成长管理", icon: "长", tone: "green", route: "/pages/students/index", roles: ["coach"], title: "成长管理", mode: "growth", tab: true },
-  coachElite: { label: "精英推荐", icon: "精", tone: "gold", route: "/pages/elite-selections/index", roles: ["coach"], title: "精英队推荐" },
-  coachWorkload: { label: "我的课时", icon: "时", tone: "orange", route: "/pages/coach-workload/index", roles: ["coach"], title: "我的课时" },
+  coachGrowth: { label: "学员成长", icon: "长", tone: "green", route: "/pages/students/index", roles: ["coach"], title: "学员成长", mode: "growth", tab: true },
+  coachElite: { label: "推荐精英队", icon: "精", tone: "gold", route: "/pages/elite-selections/index", roles: ["coach"], title: "推荐精英队" },
+  coachWorkload: { label: "我的工作", icon: "我", tone: "orange", route: "/pages/coach-workload/index", roles: ["coach"], title: "我的工作", mode: "work" },
   coachProfile: { label: "我的资料", icon: "我", tone: "green", route: "/pages/coach-team/index", roles: ["coach"], title: "我的资料", mode: "self" },
   coachNews: { label: "新闻动态", icon: "讯", tone: "navy", route: "/pages/news/index", roles: ["coach"], title: "新闻动态" },
   coachNotifications: { label: "通知消息", icon: "知", tone: "navy", route: "/pages/notifications/index", roles: ["coach"], title: "通知消息" },
 
   parentChildren: { label: "我的孩子", icon: "孩", tone: "gold", route: "/pages/students/index", roles: ["parent"], title: "我的孩子", mode: "children", tab: true },
   parentClasses: { label: "我的班级", icon: "班", tone: "blue", route: "/pages/sessions/index", roles: ["parent"], title: "我的班级", mode: "classes", tab: true },
-  parentCourses: { label: "我的课程", icon: "课", tone: "blue", route: "/pages/sessions/index", roles: ["parent"], title: "我的课程", mode: "courses", tab: true },
+  parentCourses: { label: "我的课程", icon: "课", tone: "blue", route: "/pages/sessions/index", roles: ["parent"], title: "我的课程", mode: "overview", tab: true },
   parentTimetable: { label: "我的课表", icon: "表", tone: "blue", route: "/pages/family-timetable/index", roles: ["parent"], title: "我的课表" },
   parentLeaves: { label: "请假", icon: "假", tone: "green", route: "/pages/leave-requests/index", roles: ["parent"], title: "我的请假" },
-  parentGrowth: { label: "成长档案", icon: "长", tone: "green", route: "/pages/growth-profile/index", roles: ["parent"], title: "成长档案", mode: "growth", requiredParams: ["studentId"] },
+  parentGrowth: { label: "成长", icon: "长", tone: "green", route: "/pages/growth-profile/index", roles: ["parent"], title: "成长", mode: "growth", requiredParams: ["studentId"] },
   parentAssessment: { label: "阶段测评", icon: "评", tone: "green", route: "/pages/growth-profile/index", roles: ["parent"], title: "阶段测评", mode: "assessment", requiredParams: ["studentId"] },
   parentLeague: { label: "周日成长联赛", icon: "赛", tone: "blue", route: "/pages/league-dashboard/index", roles: ["parent"], title: "南联周日成长联赛" },
   parentEnrollment: { label: "班级报名", icon: "报", tone: "blue", route: "/pages/classes/index", roles: ["parent"], title: "班级报名" },
-  parentPackages: { label: "课程套餐", icon: "套", tone: "orange", route: "/pages/orders/index", roles: ["parent"], title: "课程套餐", mode: "purchase" },
+  parentPackages: { label: "课时与购课", icon: "时", tone: "orange", route: "/pages/orders/index", roles: ["parent"], title: "课时与购课", mode: "commerce" },
   parentOrders: { label: "我的订单", icon: "单", tone: "orange", route: "/pages/orders/index", roles: ["parent"], title: "我的订单", mode: "orders" },
   parentCoaches: { label: "教练员简历", icon: "教", tone: "green", route: "/pages/coach-team/index", roles: ["parent"], title: "南联教练团队" },
   parentNews: { label: "新闻动态", icon: "讯", tone: "navy", route: "/pages/news/index", roles: ["parent"], title: "新闻动态" },
@@ -55,14 +55,14 @@ const FEATURES = Object.freeze({
 
 const HOME_FEATURES = Object.freeze({
   admin: ["adminTimetable", "adminCourses", "adminCrm", "adminTraining", "adminGrowth", "adminAssessment", "adminElite", "adminLeague", "adminClasses", "adminStudents", "adminCoaches", "adminPackages", "adminOrders", "adminPayment", "adminNews", "adminOperations"],
-  coach: ["coachTimetable", "coachClasses", "coachStudents", "coachAttendance", "coachWeeklyPlans", "coachAssessment", "coachGrowth", "coachElite", "coachWorkload", "coachProfile", "coachNews"],
-  parent: ["parentChildren", "parentClasses", "parentCourses", "parentTimetable", "parentLeaves", "parentGrowth", "parentAssessment", "parentLeague", "parentEnrollment", "parentPackages", "parentOrders", "parentCoaches", "parentNews"],
+  coach: ["coachTimetable", "coachClasses", "coachGrowth", "coachElite", "coachWorkload"],
+  parent: ["parentCourses", "parentLeaves", "parentGrowth", "parentPackages", "parentLeague"],
 });
 
 const PROFILE_FEATURES = Object.freeze({
   admin: ["adminOperations", "adminTimetable", "adminCourses", "adminClasses", "adminStudents", "adminCoaches", "adminAccounts", "adminPackages", "adminOrders", "adminPayment", "adminLeaves", "adminChildProfiles", "adminNews"],
-  coach: ["coachTimetable", "coachClasses", "coachStudents", "coachAttendance", "coachWeeklyPlans", "coachAssessment", "coachGrowth", "coachElite", "coachWorkload", "coachProfile", "coachNotifications", "coachNews"],
-  parent: ["parentChildren", "parentClasses", "parentCourses", "parentTimetable", "parentLeaves", "parentGrowth", "parentAssessment", "parentLeague", "parentEnrollment", "parentPackages", "parentOrders", "parentCoaches", "parentNotifications", "parentNews"],
+  coach: ["coachTimetable", "coachClasses", "coachGrowth", "coachElite", "coachWorkload", "coachNotifications", "coachNews"],
+  parent: ["parentChildren", "parentCourses", "parentLeaves", "parentGrowth", "parentLeague", "parentEnrollment", "parentPackages", "parentCoaches", "parentNotifications", "parentNews"],
 });
 
 const OPERATIONS_FEATURES = Object.freeze(["adminCrm", "adminTraining", "adminGrowth", "adminAssessment", "adminElite", "adminLeague", "adminPublishSession", "adminCourses", "adminTimetable", "adminWorkload", "adminClasses", "adminStudents", "adminCoaches", "adminAccounts", "adminLeaves", "adminChildProfiles", "adminPackages", "adminOrders", "adminPayment", "adminNews"]);

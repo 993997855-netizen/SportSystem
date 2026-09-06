@@ -3,7 +3,7 @@
   <view class="loading-state" wx:if="{{loading}}"><text class="loading-dot"></text><text class="loading-dot"></text><text class="loading-dot"></text></view>
   <view class="error-state" wx:elif="{{error}}">{{error}}<view class="retry" bindtap="load">重新加载</view></view>
   <block wx:else>
-  <view class="summary muted small">{{viewMode === 'growth' ? '可管理成长档案' : '共'}} {{filtered.length}} 名学员</view>
+  <view class="summary muted small">{{viewMode === 'growth' ? '选择学员查看成长并新增评价 · 共' : '共'}} {{filtered.length}} 名学员</view>
   <view class="card pressable student" wx:for="{{filtered}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
     <image wx:if="{{item.avatarUrl}}" class="avatar photo" src="{{item.avatarUrl}}" mode="aspectFill"/><view wx:else class="avatar">{{item.initial}}</view>
     <view class="grow">
@@ -12,7 +12,7 @@
       <view class="muted small" wx:if="{{role === 'admin'}}">家长：{{item.guardianName}} · {{item.guardianPhone}}</view><view class="muted small" wx:else>{{item.birthDate}}{{item.school ? ' · ' + item.school : ''}}</view>
     </view>
   </view>
-  <view class="empty card" wx:if="{{filtered.length === 0}}">{{keyword ? '没有找到符合条件的学员' : (viewMode === 'growth' ? '当前暂无可管理的成长档案' : (role === 'coach' ? '当前暂无负责学员' : (role === 'parent' ? '您还没有添加孩子' : '还没有学员，先创建第一份档案')))}}<view class="retry" wx:if="{{!keyword && role === 'admin' && viewMode !== 'growth'}}" bindtap="add">创建学员</view></view>
+  <view class="empty card" wx:if="{{filtered.length === 0}}">{{keyword ? '没有找到符合条件的学员' : (viewMode === 'growth' ? '当前暂无可查看成长的学员' : (role === 'coach' ? '当前暂无负责学员' : (role === 'parent' ? '您还没有添加孩子' : '还没有学员，先创建第一份档案')))}}<view class="retry" wx:if="{{!keyword && role === 'admin' && viewMode !== 'growth'}}" bindtap="add">创建学员</view></view>
   </block>
   <floating-add-button wx:if="{{viewMode !== 'growth' && (role === 'admin' || role === 'parent')}}" bind:add="add" />
 </view>

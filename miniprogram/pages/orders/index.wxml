@@ -1,6 +1,7 @@
 <view class="page page-enter">
+  <view class="card lesson-summary" wx:if="{{role === 'parent' && viewMode === 'commerce' && activeStudent}}"><view><view class="muted small">{{activeStudent.name}}当前剩余</view><view class="lesson-count">{{activeStudent.remainingLessons}} <text>课时</text></view></view><picker wx:if="{{students.length > 1}}" range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="student"><view class="link">切换孩子 ›</view></picker></view>
   <view class="card" wx:if="{{showPurchase && students.length && catalog.length}}">
-    <view class="card-title">购买课时套餐</view>
+    <view class="card-title">购买课时</view>
     <view class="field"><text class="field-label">学员</text><picker range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="student"><view class="picker">{{students[studentIndex].name}}</view></picker></view>
     <view class="field"><text class="field-label">训练套餐</text><picker range="{{catalog}}" range-key="displayName" value="{{catalogIndex}}" bindchange="catalog"><view class="picker">{{catalog[catalogIndex].displayName}}</view></picker><view class="validity-tip">有效期从首次正式训练消课开始计算</view></view>
     <view class="field"><text class="field-label">优惠券编码</text><input class="input" value="{{couponCode}}" bindinput="coupon" placeholder="没有可不填"/></view>

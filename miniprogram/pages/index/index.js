@@ -3,7 +3,7 @@ const { roleLabels, today } = require("../../utils/format");
 const navigation = require("../../utils/navigation-config");
 
 Page({
-  data: { loading: true, error: "", dashboard: {}, user: {}, roleLabel: "", quickEntries: [], familyStudents: [], parentEmpty: false, today: today(), attentionTitle: "重点关注", nextSchedule: null, todayScheduleStats: { total: 0, inProgress: 0, upcoming: 0 } },
+  data: { loading: true, error: "", dashboard: {}, user: {}, roleLabel: "", quickEntries: [], familyStudents: [], parentEmpty: false, latestNews: [], today: today(), attentionTitle: "重点关注", nextSchedule: null, todayScheduleStats: { total: 0, inProgress: 0, upcoming: 0 } },
   onShow() { this.load(); },
   onPullDownRefresh() { this.load(true); },
   async load(fromRefresh = false) {
@@ -15,6 +15,7 @@ Page({
       const activeStudentId = family.activeStudentId || "";
       if (activeStudentId) { getApp().globalData.activeStudentId = activeStudentId; wx.setStorageSync("activeStudentId", activeStudentId); }
       const dashboard = await api.call("getDashboard", { activeStudentId });
+      const latestNews = await api.call("listNews").catch(() => []);
       let timetable = { items: [] };
       try {
         timetable = await api.call("getUnifiedTimetable", { date: today(), studentId: activeStudentId || undefined });
@@ -33,6 +34,7 @@ Page({
         activeStudentId,
         activeStudentIndex: Math.max(0, family.students.findIndex((item) => item.id === activeStudentId)),
         parentEmpty: context.user.role === "parent" && family.students.length === 0,
+        latestNews: (latestNews || []).slice(0, 3),
         nextSchedule,
         todayScheduleStats,
         loading: false,
@@ -45,14 +47,15 @@ Page({
     }
   },
   activeStudentChange(event) { const index = Number(event.detail.value), student = this.data.familyStudents[index]; if (!student) return; getApp().globalData.activeStudentId = student.id; wx.setStorageSync("activeStudentId", student.id); this.setData({ activeStudentIndex: index, activeStudentId: student.id }, () => this.load()); },
+  openActiveStudent() { const id = this.activeStudentId(); if (id) wx.navigateTo({ url: `/pages/student-detail/index?id=${id}` }); },
   activeStudentId() { return this.data.activeStudentId || ((this.data.dashboard.recentStudents || [])[0] || {}).id || ""; },
   openFeature(key, params = {}) { try { navigation.openFeature(key, this.data.user.role, params); } catch (error) { wx.showToast({ title: error.message || "入口暂不可用", icon: "none" }); } },
   openQuick(event) { const key = event.currentTarget.dataset.key, params = {}; if (["parentGrowth", "parentAssessment"].includes(key)) params.studentId = this.activeStudentId(); if (["parentGrowth", "parentAssessment"].includes(key) && !params.studentId) return wx.showToast({ title: "请先添加孩子", icon: "none" }); this.openFeature(key, params); },
   goAddChild() { this.openFeature("parentAddChild"); },
-  goStudents() { const keys = { admin: "adminStudents", coach: "coachStudents", parent: "parentChildren" }; this.openFeature(keys[this.data.user.role]); },
+  goStudents() { const keys = { admin: "adminStudents", coach: "coachClasses", parent: "parentChildren" }; this.openFeature(keys[this.data.user.role]); },
   goClasses() { const keys = { admin: "adminClasses", coach: "coachClasses", parent: "parentEnrollment" }; this.openFeature(keys[this.data.user.role]); },
   goCoachTeam() { const keys = { admin: "adminCoaches", coach: "coachProfile", parent: "parentCoaches" }; this.openFeature(keys[this.data.user.role]); },
-  goSessions() { const keys = { admin: "adminCourses", coach: "coachAttendance", parent: "parentCourses" }; this.openFeature(keys[this.data.user.role]); },
+  goSessions() { const keys = { admin: "adminCourses", coach: "coachTimetable", parent: "parentCourses" }; this.openFeature(keys[this.data.user.role]); },
   goLeaves() { const keys = { admin: "adminLeaves", parent: "parentLeaves" }; if (keys[this.data.user.role]) this.openFeature(keys[this.data.user.role]); else this.goSessions(); },
   goOperations() { this.openFeature("adminOperations"); },
   goCoachWorkbench() { this.openFeature("coachTimetable"); },
@@ -66,6 +69,7 @@ Page({
   goLeague() { const keys = { admin: "adminLeague", parent: "parentLeague" }; if (keys[this.data.user.role]) this.openFeature(keys[this.data.user.role]); },
   goTimetable() { const keys = { admin: "adminTimetable", coach: "coachTimetable", parent: "parentTimetable" }; this.openFeature(keys[this.data.user.role]); },
   openNext() { const item = this.data.nextSchedule; if (item && item.sourceType === "TRAINING") wx.navigateTo({ url: `/pages/session-detail/index?id=${item.sessionId}&studentId=${item.studentId || ""}` }); else this.goTimetable(); },
+  leaveNext() { const item = this.data.nextSchedule; if (item && item.sourceType === "TRAINING") wx.navigateTo({ url: `/pages/session-detail/index?id=${item.sessionId}&studentId=${item.studentId || this.activeStudentId()}` }); else this.openFeature("parentLeaves"); },
   goNews() { const keys = { admin: "adminNews", coach: "coachNews", parent: "parentNews" }; this.openFeature(keys[this.data.user.role]); },
   goRenewals() { this.openFeature(this.data.user.role === "admin" ? "adminOrders" : "parentPackages"); },
   goStat4() { if (this.data.dashboard.role === "coach") this.goClasses(); else this.goRenewals(); },

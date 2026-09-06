@@ -14,7 +14,7 @@ Page({
       const roleChanged = context.user.role !== this.data.role;
       const viewMode = intent ? intent.mode : (roleChanged ? (context.user.role === "parent" ? "children" : "directory") : this.data.viewMode);
       const defaultTitle = context.user.role === "admin" ? "学员管理" : context.user.role === "coach" ? "我的学员" : "我的孩子";
-      const pageTitle = intent ? intent.title : (viewMode === "growth" ? "成长管理" : defaultTitle);
+      const pageTitle = intent ? intent.title : (viewMode === "growth" ? (context.user.role === "coach" ? "学员成长" : "成长管理") : defaultTitle);
       wx.setNavigationBarTitle({ title: pageTitle });
       const decorated = students.map((item) => ({ ...item, lowBalance: context.user.role !== "coach" && Number(item.remainingLessons) <= 5 }));
       const keyword = this.data.keyword;
