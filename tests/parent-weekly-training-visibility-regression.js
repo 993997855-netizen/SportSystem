@@ -5,20 +5,27 @@ global.wx = { getStorageSync(key) { return storage[key]; }, setStorageSync(key, 
 const domain = require("../miniprogram/utils/local-domain");
 const admin = (action, data = {}) => domain.call(action, { ...data, previewRole: "admin" });
 const parent = (action, data = {}) => domain.call(action, { ...data, previewRole: "parent", previewUserId: "parent1" });
+function currentWeek() {
+  const date = new Date();
+  const day = date.getUTCDay() || 7;
+  const value = (offset) => { const next = new Date(date); next.setUTCDate(date.getUTCDate() + offset); return next.toISOString().slice(0, 10); };
+  return { start: value(1 - day), end: value(7 - day), today: value(0) };
+}
 
 async function run() {
   let checks = 0;
   await admin("resetDemo");
+  const week = currentWeek();
   storage.nanlianClubV2.weeklyTrainingPlans.push(
-    { id: "wp-parent-confirmed", classId: "c1718", coachId: "coach1", coachName: "游导", weekStart: "2026-08-31", weekEnd: "2026-09-06", mainTheme: "1V1进攻", trainingFocus: ["变向突破", "突破后加速", "突破后射门"], curriculumId: "cur-u8-elite-simple", status: "CONFIRMED", meetingNote: "周六会议内部调整，不得返回家长", updatedBy: "admin", updatedAt: "2026-08-31 10:00" },
-    { id: "wp-parent-draft", classId: "c1718", coachId: "coach1", coachName: "游导", weekStart: "2026-08-31", weekEnd: "2026-09-06", mainTheme: "未发布内部草稿", trainingFocus: ["内部内容"], status: "DRAFT", meetingNote: "内部草稿备注", updatedAt: "2026-08-31 11:00" }
+    { id: "wp-parent-confirmed", classId: "c1718", coachId: "coach1", coachName: "游导", weekStart: week.start, weekEnd: week.end, mainTheme: "1V1进攻", trainingFocus: ["变向突破", "突破后加速", "突破后射门"], curriculumId: "cur-u8-elite-simple", status: "CONFIRMED", meetingNote: "周六会议内部调整，不得返回家长", updatedBy: "admin", updatedAt: `${week.start} 10:00` },
+    { id: "wp-parent-draft", classId: "c1718", coachId: "coach1", coachName: "游导", weekStart: week.start, weekEnd: week.end, mainTheme: "未发布内部草稿", trainingFocus: ["内部内容"], status: "DRAFT", meetingNote: "内部草稿备注", updatedAt: `${week.start} 11:00` }
   );
   const overview = await parent("getParentClassTrainingOverview", { classId: "c1718" });
   assert(overview.weeklyPlan.mainTheme === "1V1进攻"); checks += 1;
   assert.deepStrictEqual(overview.weeklyPlan.trainingFocus, ["变向突破", "突破后加速", "突破后射门"]); checks += 1;
   assert(!JSON.stringify(overview).includes("meetingNote") && !JSON.stringify(overview).includes("周六会议内部调整") && !JSON.stringify(overview).includes("未发布内部草稿")); checks += 1;
 
-  storage.nanlianClubV2.sessions.push({ id: "se-parent-latest", classId: "c1718", title: "U7精英队临时调整课", date: "2026-09-06", weekday: "周日", time: "19:00-20:30", venue: "临时调整后的球场", trainingTheme: "1V1突破", trainingFocus: "变向 / 加速 / 突破后射门", trainingNote: "教练内部训练纠错要求", status: "published", publishStatus: "PUBLISHED", coachUserId: "coach1", coachName: "游导", actualCoachAssignments: [{ coachId: "coach4", role: "HEAD" }] });
+  storage.nanlianClubV2.sessions.push({ id: "se-parent-latest", classId: "c1718", title: "U7精英队临时调整课", date: week.today, weekday: "本周", time: "19:00-20:30", venue: "临时调整后的球场", trainingTheme: "1V1突破", trainingFocus: "变向 / 加速 / 突破后射门", trainingNote: "教练内部训练纠错要求", status: "published", publishStatus: "PUBLISHED", coachUserId: "coach1", coachName: "游导", actualCoachAssignments: [{ coachId: "coach4", role: "HEAD" }] });
   const session = await parent("getSession", { id: "se-parent-latest", studentId: "s1" });
   assert(session.trainingTheme === "1V1突破" && session.trainingFocus === "变向 / 加速 / 突破后射门"); checks += 1;
   assert(session.venue === "临时调整后的球场" && session.coach.name === "吴教练"); checks += 1;

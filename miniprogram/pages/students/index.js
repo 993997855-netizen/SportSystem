@@ -2,12 +2,14 @@ const api = require("../../utils/api");
 const navigation = require("../../utils/navigation-config");
 
 Page({
-  data: { students: [], filtered: [], keyword: "", role: "", viewMode: "directory", pageTitle: "学员档案", loading: true, error: "" },
+  data: { students: [], filtered: [], keyword: "", role: "", viewMode: "directory", pageTitle: "学员档案", loading: true, hasLoaded: false, error: "" },
   onShow() { this.load(); },
   onTabItemTap() { navigation.clearTabIntent(); this.setData({ viewMode: "directory" }, () => this.load()); },
-  onPullDownRefresh() { this.load(true); },
+  onPullDownRefresh() { api.clearCache(); this.load(true); },
   async load(fromRefresh = false) {
-    if (!fromRefresh) this.setData({ loading: true, error: "" });
+    const loadId = (this._loadId || 0) + 1;
+    this._loadId = loadId;
+    if (!fromRefresh && !this.data.hasLoaded) this.setData({ loading: true, error: "" });
     try {
       const [context, students] = await Promise.all([api.call("getContext"), api.call("listStudents")]);
       const intent = navigation.consumeTabIntent("/pages/students/index", context.user.role);
@@ -19,9 +21,10 @@ Page({
       const decorated = students.map((item) => ({ ...item, lowBalance: context.user.role !== "coach" && Number(item.remainingLessons) <= 5 }));
       const keyword = this.data.keyword;
       const filtered = keyword ? decorated.filter((item) => `${item.name || ""}${context.user.role === "coach" ? "" : item.guardianName || ""}${item.classNames || ""}`.includes(keyword)) : decorated;
-      this.setData({ students: decorated, filtered, role: context.user.role, viewMode, pageTitle, loading: false, error: "" });
+      if (loadId !== this._loadId) return;
+      this.setData({ students: decorated, filtered, role: context.user.role, viewMode, pageTitle, loading: false, hasLoaded: true, error: "" });
     } catch (error) {
-      this.setData({ loading: false, error: "学员数据加载失败" });
+      if (loadId === this._loadId) this.setData({ loading: false, error: "学员数据加载失败" });
     } finally { wx.stopPullDownRefresh(); }
   },
   search(event) {

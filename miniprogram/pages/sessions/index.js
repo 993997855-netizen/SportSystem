@@ -2,12 +2,14 @@ const api = require("../../utils/api");
 const navigation = require("../../utils/navigation-config");
 
 Page({
-  data: { loading: true, error: "", role: "", viewMode: "overview", pageTitle: "课程安排", sessions: [], nextSession: null, students: [], studentChoices: [], studentIndex: 0, studentId: "", myClasses: [] },
+  data: { loading: true, hasLoaded: false, error: "", role: "", viewMode: "overview", pageTitle: "课程安排", sessions: [], nextSession: null, students: [], studentChoices: [], studentIndex: 0, studentId: "", myClasses: [] },
   onShow() { this.load(); },
   onTabItemTap() { navigation.clearTabIntent(); this.setData({ viewMode: "overview" }, () => this.load()); },
-  onPullDownRefresh() { this.load(true); },
+  onPullDownRefresh() { api.clearCache(); this.load(true); },
   async load(refresh = false) {
-    if (!refresh) this.setData({ loading: true, error: "" });
+    const loadId = (this._loadId || 0) + 1;
+    this._loadId = loadId;
+    if (!refresh && !this.data.hasLoaded) this.setData({ loading: true, error: "" });
     try {
       const [context, students] = await Promise.all([api.call("getContext"), api.call("listStudents")]);
       const intent = navigation.consumeTabIntent("/pages/sessions/index", context.user.role);
@@ -30,9 +32,10 @@ Page({
         const selectedStudent = students.find((item) => item.id === studentId) || {};
         myClasses = context.user.role === "parent" ? (selectedStudent.classes || []).map((item) => ({ ...item, rowKey: `${item.id}-${studentId}`, studentId, studentName: selectedStudent.name })) : [];
       }
+      if (loadId !== this._loadId) return;
       const decorated = sessions.map((item) => ({ ...item, rowKey: `${item.id}-${item.studentId || studentId}`, shortDate: String(item.date || "").slice(5), statusLabel: item.myStatus === "booked" ? "正常参加" : item.myStatus === "leave_pending" ? "请假待审批" : item.myStatus === "leave_approved" ? "已请假 · 0课时" : item.myStatus === "leave_rejected" ? "请假被拒绝" : item.statusLabel || "已发布" }));
-      this.setData({ role: context.user.role, viewMode, pageTitle, students, studentChoices, studentIndex, studentId, myClasses, sessions: decorated, nextSession: context.user.role === "parent" ? decorated.find((item) => item.status !== "CANCELLED") || null : null, loading: false });
-    } catch (error) { this.setData({ loading: false, error: "课程加载失败，请重试" }); }
+      this.setData({ role: context.user.role, viewMode, pageTitle, students, studentChoices, studentIndex, studentId, myClasses, sessions: decorated, nextSession: context.user.role === "parent" ? decorated.find((item) => item.status !== "CANCELLED") || null : null, loading: false, hasLoaded: true, error: "" });
+    } catch (error) { if (loadId === this._loadId) this.setData({ loading: false, error: "课程加载失败，请重试" }); }
     finally { wx.stopPullDownRefresh(); }
   },
   studentChange(event) { const index = Number(event.detail.value), id = this.data.studentChoices[index].id; if (id !== "ALL") { getApp().globalData.activeStudentId = id; wx.setStorageSync("activeStudentId", id); } this.setData({ studentIndex: index, studentId: id }, () => this.load()); },

@@ -6,12 +6,12 @@
 .ball { width: 92rpx; height: 92rpx; border-radius: 46rpx; background: rgba(255,255,255,.14); text-align: center; line-height: 92rpx; font-size: 48rpx; animation: ball-float 3.2s ease-in-out infinite; }
 .content { margin-top: -48rpx; }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14rpx; }
-.stat { background: #fff; border:1rpx solid #edf1f6; border-radius: 18rpx; padding: 22rpx; box-shadow: 0 4rpx 16rpx rgba(23,59,119,.04); }
+.stat { min-height:132rpx; background: #fff; border:1rpx solid #edf1f6; border-radius: 20rpx; padding: 22rpx; display:flex;flex-direction:column;justify-content:center;box-shadow: 0 7rpx 22rpx rgba(23,59,119,.05); }
 .stat-value { display: block; font-size: 40rpx; line-height: 1.1; font-weight: 800; color: #173b77; }
 .stat-value.warn { color: #d97800; }
 .stat-label { display: block; color: #7a817d; font-size: 24rpx; margin-top: 10rpx; }
 .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12rpx; }
-.quick { background: #fff; border:1rpx solid #edf1f6; padding: 19rpx 8rpx; border-radius: 18rpx; text-align: center; font-size: 24rpx; }
+.quick { min-height:142rpx;background: #fff; border:1rpx solid #edf1f6; padding: 20rpx 8rpx; border-radius: 20rpx; display:flex;flex-direction:column;align-items:center;justify-content:center;text-align: center; font-size: 24rpx; box-shadow:0 5rpx 18rpx rgba(23,59,119,.04); }
 .quick-icon { width: 60rpx; height: 60rpx; margin: 0 auto 10rpx; line-height: 60rpx; border-radius: 18rpx; font-weight: 800; }
 .green { background: #e8f5ee; color: #12643b; }.blue { background: #eaf1ff; color: #336fd1; }.gold{background:#fff6da;color:#8c6700}.orange { background: #fff1dd; color: #c56c00; }.navy{background:#e8edf7;color:#173b77}
 .class-name, .student-name { font-weight: 700; font-size: 30rpx; }

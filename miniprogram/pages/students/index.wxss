@@ -1,8 +1,8 @@
-.search { display: flex; align-items: center; gap: 16rpx; background: #fff; border-radius: 20rpx; padding: 0 24rpx; height: 88rpx; }
+.search { display: flex; align-items: center; gap: 16rpx; background: #fff; border:1rpx solid #e8edf4; border-radius: 20rpx; padding: 0 24rpx; min-height: 88rpx; box-shadow:0 5rpx 18rpx rgba(23,59,119,.045); }
 .search input { flex: 1; }
 .search-icon { color: #173b77; font-size: 36rpx; }.clear { color: #8a918d; font-size: 38rpx; padding: 10rpx; }
 .summary { margin: 24rpx 4rpx 18rpx; }
-.student { display: flex; align-items: center; gap: 22rpx; }
+.student { display: flex; align-items: center; gap: 22rpx; min-height:128rpx; }
 .avatar { width: 84rpx; height: 84rpx; flex: 0 0 auto; border-radius: 50%; background: #eaf0f9; color: #173b77; line-height: 84rpx; text-align: center; font-size: 32rpx; font-weight: 800; }
 .name { font-weight: 700; font-size: 30rpx; }.meta { margin: 8rpx 0; }.lessons { color: #173b77; font-weight: 700; }.lessons.low { color: #d97800; }
 .photo-missing{display:inline-block;margin-left:10rpx;padding:3rpx 10rpx;border-radius:999rpx;background:#fff0dc;color:#a85b00;font-size:20rpx}

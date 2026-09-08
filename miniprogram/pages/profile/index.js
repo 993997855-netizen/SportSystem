@@ -3,10 +3,12 @@ const { roleLabels } = require("../../utils/format");
 const navigation = require("../../utils/navigation-config");
 
 Page({
-  data: { context: null, roleLabel: "", modeLabel: "", menuEntries: [], activeStudentId: "", inviteCode: "", loading: true, error: "", binding: false, switchingRole: false, roles: [{ value: "admin", label: "管理员" }, { value: "coach", label: "教练员" }, { value: "parent", label: "家长" }] },
+  data: { context: null, roleLabel: "", modeLabel: "", menuEntries: [], activeStudentId: "", inviteCode: "", loading: true, hasLoaded: false, error: "", binding: false, switchingRole: false, roles: [{ value: "admin", label: "管理员" }, { value: "coach", label: "教练员" }, { value: "parent", label: "家长" }] },
   onShow() { this.load(); },
   async load() {
-    this.setData({ loading: true, error: "" });
+    const loadId = (this._loadId || 0) + 1;
+    this._loadId = loadId;
+    if (!this.data.hasLoaded) this.setData({ loading: true, error: "" });
     try {
       const context = await api.call("getContext");
       let activeStudentId = "";
@@ -14,8 +16,9 @@ Page({
         const family = await api.call("getFamilyContext").catch(() => null);
         activeStudentId = family && family.activeStudentId ? family.activeStudentId : "";
       }
-      this.setData({ context, activeStudentId, menuEntries: navigation.profileEntries(context.user.role), roleLabel: roleLabels[context.user.role], modeLabel: context.mode === "local" ? "本地演示" : "云端共享", loading: false });
-    } catch (error) { this.setData({ loading: false, error: "账号信息加载失败" }); }
+      if (loadId !== this._loadId) return;
+      this.setData({ context, activeStudentId, menuEntries: navigation.profileEntries(context.user.role), roleLabel: roleLabels[context.user.role], modeLabel: context.mode === "local" ? "本地演示" : "云端共享", loading: false, hasLoaded: true, error: "" });
+    } catch (error) { if (loadId === this._loadId) this.setData({ loading: false, error: "账号信息加载失败" }); }
   },
   async switchRole(event) {
     const role = event.currentTarget.dataset.role;

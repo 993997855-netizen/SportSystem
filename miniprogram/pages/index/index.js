@@ -3,25 +3,25 @@ const { roleLabels, today } = require("../../utils/format");
 const navigation = require("../../utils/navigation-config");
 
 Page({
-  data: { loading: true, error: "", dashboard: {}, user: {}, roleLabel: "", quickEntries: [], familyStudents: [], parentEmpty: false, latestNews: [], today: today(), attentionTitle: "重点关注", nextSchedule: null, todayScheduleStats: { total: 0, inProgress: 0, upcoming: 0 } },
+  data: { loading: true, hasLoaded: false, error: "", dashboard: {}, user: {}, roleLabel: "", quickEntries: [], familyStudents: [], parentEmpty: false, latestNews: [], today: today(), attentionTitle: "重点关注", nextSchedule: null, todayScheduleStats: { total: 0, inProgress: 0, upcoming: 0 } },
   onShow() { this.load(); },
-  onPullDownRefresh() { this.load(true); },
+  onPullDownRefresh() { api.clearCache(); this.load(true); },
   async load(fromRefresh = false) {
-    if (!fromRefresh) this.setData({ loading: true, error: "" });
+    const loadId = (this._loadId || 0) + 1;
+    this._loadId = loadId;
+    if (!fromRefresh && !this.data.hasLoaded) this.setData({ loading: true, error: "" });
     try {
       const context = await api.call("getContext");
       let family = { students: [], activeStudentId: "" };
       if (context.user.role === "parent") family = await api.call("getFamilyContext", { activeStudentId: getApp().globalData.activeStudentId });
       const activeStudentId = family.activeStudentId || "";
       if (activeStudentId) { getApp().globalData.activeStudentId = activeStudentId; wx.setStorageSync("activeStudentId", activeStudentId); }
-      const dashboard = await api.call("getDashboard", { activeStudentId });
-      const latestNews = await api.call("listNews").catch(() => []);
-      let timetable = { items: [] };
-      try {
-        timetable = await api.call("getUnifiedTimetable", { date: today(), studentId: activeStudentId || undefined });
-      } catch (error) {
-        console.warn("统一课表暂不可用，首页继续使用基础数据", error);
-      }
+      const [dashboard, latestNews, timetable] = await Promise.all([
+        api.call("getDashboard", { activeStudentId }),
+        api.call("listNews", {}, { silent: true }).catch(() => []),
+        api.call("getUnifiedTimetable", { date: today(), studentId: activeStudentId || undefined }, { silent: true }).catch(() => ({ items: [] })),
+      ]);
+      if (loadId !== this._loadId) return;
       const nextSchedule = (timetable.items || []).find((item) => item.date >= today()) || null;
       const todayItems = (timetable.items || []).filter((item) => item.sourceType === "TRAINING" && item.date === today()), todayScheduleStats = { total: todayItems.length, inProgress: todayItems.filter((item) => item.status === "IN_PROGRESS").length, upcoming: todayItems.filter((item) => !["IN_PROGRESS", "COMPLETED", "CANCELLED"].includes(item.status)).length };
       this.setData({
@@ -38,10 +38,11 @@ Page({
         nextSchedule,
         todayScheduleStats,
         loading: false,
+        hasLoaded: true,
         error: ""
       });
     } catch (error) {
-      this.setData({ loading: false, error: "数据加载失败，请检查网络后重试" });
+      if (loadId === this._loadId) this.setData({ loading: false, error: "数据加载失败，请检查网络后重试" });
     } finally {
       wx.stopPullDownRefresh();
     }

@@ -108,6 +108,19 @@ async function fetchByIds(name, ids) {
   for (let i = 0; i < unique.length; i += 100) rows.push(...(await db.collection(name).where({ _id: command.in(unique.slice(i, i + 100)) }).get()).data);
   return rows;
 }
+async function mapLimit(items, limit, worker) {
+  const result = new Array(items.length);
+  let cursor = 0;
+  async function run() {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      result[index] = await worker(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+  return result;
+}
 async function findUser(openid) {
   const found = await db.collection("users").where({ openid }).limit(1).get();
   return found.data[0] || null;
@@ -212,14 +225,13 @@ async function listClasses(user, input = {}) {
   const coachId = user.role === "coach" ? "" : String(input.coachId || "");
   if (keyword) classes = classes.filter((item) => `${item.classCode || ""}${item.name || ""}${item.headCoachName || item.coachName || ""}`.toLowerCase().includes(keyword));
   if (coachId) classes = classes.filter((item) => (item.headCoachUserId || item.coachUserId) === coachId);
-  const rows = []; for (const item of classes) { const decorated = await classService.decorateClass(item); rows.push(user.role === "coach" ? coachScope.coachClassView(decorated) : decorated); } return rows;
+  return mapLimit(classes, 6, async (item) => { const decorated = await classService.decorateClass(item); return user.role === "coach" ? coachScope.coachClassView(decorated) : decorated; });
 }
 async function listClassCoaches(user) {
   requireRole(user, ["admin", "coach"]);
   if (user.role === "coach") return [{ id: user.coachId || user._id, name: user.name, accountStatus: "BOUND" }];
   const profiles = (await fetchAll("coachProfiles")).filter((item) => item.active !== false && String(item.status || "ACTIVE").toUpperCase() === "ACTIVE");
-  const rows = [];
-  for (const profile of profiles) { const binding = await coachBindingService.decorateProfile(profile); rows.push({ id: profile.coachUserId || profile._id, name: profile.name || "未命名教练", avatarUrl: profile.avatarUrl || "", accountStatus: binding.accountStatus }); }
+  const rows = await mapLimit(profiles, 6, async (profile) => { const binding = await coachBindingService.decorateProfile(profile); return { id: profile.coachUserId || profile._id, name: profile.name || "未命名教练", avatarUrl: profile.avatarUrl || "", accountStatus: binding.accountStatus }; });
   const represented = new Set(rows.map((item) => item.id));
   for (const item of (await fetchAll("users")).filter((row) => row.role === "coach" || canSwitchTestRole(row.openid))) if (!represented.has(item.coachId || item._id)) rows.push({ id: item.coachId || item._id, name: item.name || "未命名教练", accountStatus: "BOUND" });
   return rows;
@@ -234,7 +246,7 @@ async function getStudent(user, id) {
     user.role === "coach" ? Promise.resolve({ data: [] }) : db.collection("lessonLedger").where({ studentId: id }).orderBy("createdAt", "desc").limit(100).get(),
     user.role === "coach" ? Promise.resolve([]) : businessService.call("listLessonEntitlements", { studentId: id }, user)
   ]);
-  const decoratedClasses = []; for (const item of classes) decoratedClasses.push(await classService.decorateClass(item));
+  const decoratedClasses = await mapLimit(classes, 6, (item) => classService.decorateClass(item));
   let recruitment = null;
   if (user.role === "coach") return { ...coachScope.coachStudentView(student), classIds: memberships.map((item) => item.classId), classes: decoratedClasses, memberships: memberships.map(publicDoc), attendance: attendance.data.filter((item) => memberships.some((member) => member.classId === item.classId)).map(publicDoc), lessonLedger: [], lessonEntitlements: [], recruitment: null };
   const leadResult = student.crmLeadId ? await db.collection("leads").doc(student.crmLeadId).get().catch(() => ({ data: null })) : await db.collection("leads").where({ convertedStudentId: id }).limit(1).get();
@@ -322,7 +334,8 @@ async function listSessions(user, input) {
     const classIds = new Set((await classService.studentMemberships(studentId)).map((item) => item.classId));
     sessions = sessions.filter((item) => classIds.has(item.classId));
   }
-  const rows = []; for (const session of sessions.sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))) rows.push(await decorateSession(session, studentId, user.role !== "parent", user.role)); return rows;
+  const sorted = sessions.sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+  return mapLimit(sorted, 6, (session) => decorateSession(session, studentId, user.role !== "parent", user.role));
 }
 async function getSession(user, id, studentId) {
   const session = (await db.collection("sessions").doc(validId(id)).get()).data; if (!session) throw new Error("课程不存在"); if (user.role === "parent" && !["published", "COMPLETED", "CANCELLED"].includes(session.status)) throw new Error("课程尚未发布"); await sessionAccess(user, session);

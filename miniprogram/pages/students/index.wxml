@@ -5,7 +5,7 @@
   <block wx:else>
   <view class="summary muted small">{{viewMode === 'growth' ? '选择学员查看成长并新增评价 · 共' : '共'}} {{filtered.length}} 名学员</view>
   <view class="card pressable student" wx:for="{{filtered}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
-    <image wx:if="{{item.avatarUrl}}" class="avatar photo" src="{{item.avatarUrl}}" mode="aspectFill"/><view wx:else class="avatar">{{item.initial}}</view>
+    <image wx:if="{{item.avatarUrl}}" class="avatar photo" src="{{item.avatarUrl}}" mode="aspectFill" lazy-load="{{true}}" fade-show="{{true}}"/><view wx:else class="avatar">{{item.initial}}</view>
     <view class="grow">
       <view class="between"><view class="name">{{item.name}}</view><view wx:if="{{role !== 'coach'}}" class="lessons {{item.lowBalance ? 'low' : ''}}">{{item.remainingLessons}} 节</view></view>
       <view class="muted small meta">{{item.classNames || '未分班'}} <text class="photo-missing" wx:if="{{role === 'admin' && !item.avatarUrl}}">照片未完善</text></view>
